@@ -20,7 +20,6 @@ config GPIO_SUPPORT
 	bool
 
 config PCI_SUPPORT
-	select AUDIO_SUPPORT
 	bool
 
 config PCIE_SUPPORT
@@ -30,7 +29,6 @@ config PCMCIA_SUPPORT
 	bool
 
 config USB_SUPPORT
-	select AUDIO_SUPPORT
 	bool
 
 config USB_GADGET_SUPPORT
