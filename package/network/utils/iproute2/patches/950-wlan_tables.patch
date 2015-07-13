@@ -1,0 +1,11 @@
+--- a/etc/iproute2/rt_tables
++++ b/etc/iproute2/rt_tables
+@@ -4,6 +4,8 @@
+ 255	local
+ 254	main
+ 253	default
++201	wlan2g
++200	wlan5g
+ 0	unspec
+ #
+ # local

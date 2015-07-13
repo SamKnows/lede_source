@@ -1,0 +1,33 @@
+#!/bin/sh
+
+[ -z "$1" ] && echo "Error: should be run by udhcpc" && exit 1
+
+if [ "${interface}" != wlan0 -a "${interface}" != wlan1 ]; then
+	exit 0
+fi
+
+wlan0_table=wlan5g
+wlan1_table=wlan2g
+
+eval table='$'${interface}_table
+
+case "$1" in
+	deconfig)
+		ip rule del table ${table}
+	;;
+	renew|bound)
+		ip rule del table ${table}
+		ip rule add from ${ip} table ${table} pref 200
+		proto_init_update "*" 1
+		proto_set_keep 1
+		for i in $router; do
+			proto_add_ipv4_route "$i" 32 "" "$ip" 0 "$table"
+			eval $(ipcalc.sh $ip $mask)
+			proto_add_ipv4_route "$NETWORK" $mask "" "$ip" 0 "$table"
+			proto_add_ipv4_route 0.0.0.0 0 "$i" "$ip" 0 "$table"
+		done
+		proto_send_update "$INTERFACE"
+	;;
+esac
+
+exit 0
