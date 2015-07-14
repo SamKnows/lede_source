@@ -1,0 +1,77 @@
+#!/bin/sh
+
+[ "${ACTION}" = "released" ] || exit 0
+
+[ -f /tmp/samknows/enable_wps ] || exit 0
+
+. /lib/functions/leds.sh
+. /etc/unit_specific
+
+exec 3>/var/lock/skwireless
+if ! flock -n 3; then
+	exit 1
+fi
+
+new_wifi_config() {
+	DEVICE=$1
+
+	if [ "${DEVICE}" = "${UNIT_WIFI5}" ]; then
+		NETWORK=wlan5g
+	else
+		NETWORK=wlan2g
+	fi
+
+	OLD_TRIG=$(cat /sys/class/leds/tp-link\:blue\:${NETWORK}/trigger | sed -r 's/.*\[(.*)\].*/\1/')
+	OLD_MODE=$(cat /sys/class/leds/tp-link\:blue\:${NETWORK}/mode)
+	OLD_DEVICE=$(cat /sys/class/leds/tp-link\:blue\:${NETWORK}/device_name)
+	status_led=tp-link:blue:${NETWORK}
+	status_led_blink_fast
+	OUTPUT=$(skwps "$DEVICE")
+	RET=$?
+	led_set_attr ${status_led} trigger "${OLD_TRIG}"
+	led_set_attr ${status_led} mode "${OLD_MODE}"
+	led_set_attr ${status_led} device_name "${OLD_DEVICE}"
+
+	if [ ${RET} -ne 0 -o -z "${OUTPUT}" ]; then
+		return
+	fi
+
+	SSID=$(echo "$OUTPUT" | grep '^SSID: ')
+	SSID=${SSID:6}
+	KEY=$(echo "$OUTPUT" | grep '^Key: ')
+	KEY=${KEY:5}
+
+	DEVICE_PATH=$(readlink -f /sys/class/net/${DEVICE}/device)
+	DEVICE_PATH=${DEVICE_PATH:13}
+
+	exec 4>/var/lock/skwps_commit
+	flock 4
+
+	WIFI_DEVICE=$(uci show wireless | grep "wireless\.radio[0-9]\+\.path='${DEVICE_PATH}'")
+	WIFI_DEVICE=${WIFI_DEVICE:9:6}
+
+	WIFI_INTERFACE=$(uci show wireless | grep -e "@wifi-iface.*\.device='${WIFI_DEVICE}'")
+	WIFI_INTERFACE=${WIFI_INTERFACE:9:14}
+
+	uci delete wireless.${WIFI_INTERFACE}
+
+	INTERFACE_CFG=$(uci add wireless wifi-iface)
+	uci set wireless.${INTERFACE_CFG}.device=${WIFI_DEVICE}
+	uci set wireless.${INTERFACE_CFG}.mode=sta
+	uci set wireless.${INTERFACE_CFG}.ssid="$SSID"
+	uci set wireless.${INTERFACE_CFG}.encryption=psk2
+	uci set wireless.${INTERFACE_CFG}.key="$KEY"
+	uci add_list wireless.${INTERFACE_CFG}.network="${NETWORK}"
+	uci add_list wireless.${INTERFACE_CFG}.network="${NETWORK}_6"
+	uci set wireless.${WIFI_DEVICE}.country=GB
+	uci commit
+
+	ifup ${NETWORK}
+	ifup ${NETWORK}_6
+}
+
+cd /var/run/wpa_supplicant
+for socket in *; do
+	[ -S "$socket" ] || continue
+	new_wifi_config $socket &
+done
