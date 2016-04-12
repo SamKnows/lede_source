@@ -982,6 +982,21 @@ endef
 
 $(eval $(call KernelPackage,pktgen))
 
+define KernelPackage/drop_monitor
+  SUBMENU:=$(NETWORK_SUPPORT_MENU)
+  DEPENDS:=@!TARGET_uml
+  TITLE:=Network packet drop monitor
+  KCONFIG:=CONFIG_NET_DROP_MONITOR
+  FILES:=$(LINUX_DIR)/net/core/drop_monitor.ko
+  #AUTOLOAD:=$(call AutoLoad,99,drop_monitor)
+endef
+
+define KernelPackage/drop_monitor/description
+  Kernel modules for the Network Drop Monitor
+endef
+
+$(eval $(call KernelPackage,drop_monitor))
+
 define KernelPackage/l2tp
   SUBMENU:=$(NETWORK_SUPPORT_MENU)
   TITLE:=Layer Two Tunneling Protocol (L2TP)
