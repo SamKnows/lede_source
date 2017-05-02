@@ -736,7 +736,13 @@ wpa_supplicant_add_network() {
 	[[ "$_w_mode" = adhoc ]] || ibss_htmode=
 	[ -n "$ibss_htmode" ] && append network_data "htmode=$ibss_htmode" "$N$T"
 
-	cat >> "$_config" <<EOF
+	if [ -z "$ssid" ]; then
+		cat >> "$_config" <<EOF
+wps_cred_processing=1
+EOF
+	else
+		cat >> "$_config" <<EOF
+wps_cred_processing=1
 network={
 	$scan_ssid
 	ssid="$ssid"
@@ -744,6 +750,7 @@ network={
 	$network_data
 }
 EOF
+	fi
 	return 0
 }
 
