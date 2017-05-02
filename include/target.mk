@@ -19,6 +19,7 @@ DEFAULT_PACKAGES.nas:=block-mount fdisk lsblk mdadm
 # For router targets
 DEFAULT_PACKAGES.router:=dnsmasq iptables ip6tables ppp ppp-mod-pppoe firewall odhcpd odhcp6c
 DEFAULT_PACKAGES.bootloader:=
+DEFAULT_PACKAGES.samknows:=odhcp6c
 
 ifneq ($(DUMP),)
   all: dumpinfo

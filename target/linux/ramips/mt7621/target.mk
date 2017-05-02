@@ -4,6 +4,7 @@
 
 SUBTARGET:=mt7621
 BOARDNAME:=MT7621 based boards
+DEVICE_TYPE:=samknows
 FEATURES+=nand ramdisk rtc usb
 CPU_TYPE:=1004kc
 
