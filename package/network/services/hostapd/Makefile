@@ -325,7 +325,7 @@ endef
 
 define Build/Compile/supplicant
 	+$(call Build/RunMake,wpa_supplicant, \
-		wpa_cli wpa_supplicant \
+		wpa_cli wpa_supplicant libwpa_client.so \
 	)
 endef
 
@@ -346,6 +346,9 @@ endef
 
 define Install/supplicant
 	$(INSTALL_DIR) $(1)/usr/sbin
+
+	mkdir -p $(1)/usr/lib
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/wpa_supplicant/libwpa_client.so $(1)/usr/lib/
 endef
 
 define Package/hostapd-common/install
@@ -398,6 +401,14 @@ ifeq ($(BUILD_VARIANT),supplicant-full)
 	$(CP) $(PKG_BUILD_DIR)/wpa_supplicant/eapol_test $(1)/usr/sbin/
   endef
 endif
+
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/include
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/src/common/wpa_ctrl.h $(1)/usr/include/
+
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/wpa_supplicant/libwpa_client.so $(1)/usr/lib/
+endef
 
 $(eval $(call BuildPackage,hostapd))
 $(eval $(call BuildPackage,hostapd-mini))
