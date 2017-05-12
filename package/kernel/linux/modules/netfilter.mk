@@ -19,7 +19,7 @@ define KernelPackage/nf-ipt
 	CONFIG_NETFILTER_ADVANCED=y \
 	$(KCONFIG_NF_IPT)
   FILES:=$(foreach mod,$(NF_IPT-m),$(LINUX_DIR)/net/$(mod).ko)
-  AUTOLOAD:=$(call AutoProbe,$(notdir $(NF_IPT-m)))
+  #AUTOLOAD:=$(call AutoProbe,$(notdir $(NF_IPT-m)))
 endef
 
 $(eval $(call KernelPackage,nf-ipt))
@@ -43,7 +43,7 @@ define KernelPackage/ipt-core
   TITLE:=Iptables core
   KCONFIG:=$(KCONFIG_IPT_CORE)
   FILES:=$(foreach mod,$(IPT_CORE-m),$(LINUX_DIR)/net/$(mod).ko)
-  AUTOLOAD:=$(call AutoProbe,$(notdir $(IPT_CORE-m)))
+  #AUTOLOAD:=$(call AutoProbe,$(notdir $(IPT_CORE-m)))
   DEPENDS:=+kmod-nf-ipt
 endef
 

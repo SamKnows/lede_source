@@ -379,7 +379,7 @@ define KernelPackage/usb-acm
   TITLE:=Support for modems/isdn controllers
   KCONFIG:=CONFIG_USB_ACM
   FILES:=$(LINUX_DIR)/drivers/usb/class/cdc-acm.ko
-  AUTOLOAD:=$(call AutoProbe,cdc-acm)
+  #AUTOLOAD:=$(call AutoProbe,cdc-acm)
 $(call AddDepends/usb)
 endef
 
@@ -394,7 +394,7 @@ define KernelPackage/usb-wdm
   TITLE:=USB Wireless Device Management
   KCONFIG:=CONFIG_USB_WDM
   FILES:=$(LINUX_DIR)/drivers/usb/class/cdc-wdm.ko
-  AUTOLOAD:=$(call AutoProbe,cdc-wdm)
+  #AUTOLOAD:=$(call AutoProbe,cdc-wdm)
 $(call AddDepends/usb)
 $(call AddDepends/usb-net)
 endef
@@ -446,7 +446,7 @@ define KernelPackage/usb-serial
   TITLE:=Support for USB-to-Serial converters
   KCONFIG:=CONFIG_USB_SERIAL
   FILES:=$(LINUX_DIR)/drivers/usb/serial/usbserial.ko
-  AUTOLOAD:=$(call AutoProbe,usbserial)
+  #AUTOLOAD:=$(call AutoProbe,usbserial)
   $(call AddDepends/usb)
 endef
 
@@ -749,7 +749,7 @@ define KernelPackage/usb-serial-wwan
   TITLE:=Support for GSM and CDMA modems
   KCONFIG:=CONFIG_USB_SERIAL_WWAN
   FILES:=$(LINUX_DIR)/drivers/usb/serial/usb_wwan.ko
-  AUTOLOAD:=$(call AutoProbe,usb_wwan)
+  #AUTOLOAD:=$(call AutoProbe,usb_wwan)
   $(call AddDepends/usb-serial)
 endef
 
@@ -765,7 +765,7 @@ define KernelPackage/usb-serial-option
   DEPENDS:=+kmod-usb-serial-wwan
   KCONFIG:=CONFIG_USB_SERIAL_OPTION
   FILES:=$(LINUX_DIR)/drivers/usb/serial/option.ko
-  AUTOLOAD:=$(call AutoProbe,option)
+  #AUTOLOAD:=$(call AutoProbe,option)
   $(call AddDepends/usb-serial)
 endef
 
@@ -796,7 +796,7 @@ define KernelPackage/usb-storage
   DEPENDS:= +kmod-scsi-core
   KCONFIG:=CONFIG_USB_STORAGE
   FILES:=$(LINUX_DIR)/drivers/usb/storage/usb-storage.ko
-  AUTOLOAD:=$(call AutoProbe,usb-storage,1)
+  #AUTOLOAD:=$(call AutoProbe,usb-storage,1)
   $(call AddDepends/usb)
 endef
 
@@ -918,7 +918,7 @@ define KernelPackage/usb-net
   DEPENDS:=+kmod-mii
   KCONFIG:=CONFIG_USB_USBNET \
 	CONFIG_USB_NET_DRIVERS
-  AUTOLOAD:=$(call AutoProbe,usbnet)
+  #AUTOLOAD:=$(call AutoProbe,usbnet)
   FILES:=$(LINUX_DIR)/drivers/$(USBNET_DIR)/usbnet.ko
   $(call AddDepends/usb)
 endef
@@ -974,7 +974,7 @@ define KernelPackage/usb-net-hso
   KCONFIG:=CONFIG_USB_HSO
   FILES:= \
 	$(LINUX_DIR)/drivers/$(USBNET_DIR)/hso.ko
-  AUTOLOAD:=$(call AutoProbe,hso)
+  #AUTOLOAD:=$(call AutoProbe,hso)
   $(call AddDepends/usb-net)
   $(call AddDepends/rfkill)
 endef
@@ -1064,7 +1064,7 @@ define KernelPackage/usb-net-cdc-ether
   TITLE:=Support for cdc ethernet connections
   KCONFIG:=CONFIG_USB_NET_CDCETHER
   FILES:=$(LINUX_DIR)/drivers/$(USBNET_DIR)/cdc_ether.ko
-  AUTOLOAD:=$(call AutoProbe,cdc_ether)
+  #AUTOLOAD:=$(call AutoProbe,cdc_ether)
   $(call AddDepends/usb-net)
 endef
 
@@ -1079,7 +1079,7 @@ define KernelPackage/usb-net-cdc-eem
   TITLE:=Support for CDC EEM connections
   KCONFIG:=CONFIG_USB_NET_CDC_EEM
   FILES:=$(LINUX_DIR)/drivers/$(USBNET_DIR)/cdc_eem.ko
-  AUTOLOAD:=$(call AutoProbe,cdc_eem)
+  #AUTOLOAD:=$(call AutoProbe,cdc_eem)
   $(call AddDepends/usb-net)
 endef
 
@@ -1096,7 +1096,7 @@ define KernelPackage/usb-net-cdc-subset
 	CONFIG_USB_NET_CDC_SUBSET \
 	CONFIG_USB_ARMLINUX
   FILES:=$(LINUX_DIR)/drivers/$(USBNET_DIR)/cdc_subset.ko
-  AUTOLOAD:=$(call AutoProbe,cdc_subset)
+  #AUTOLOAD:=$(call AutoProbe,cdc_subset)
   $(call AddDepends/usb-net)
 endef
 
@@ -1111,7 +1111,7 @@ define KernelPackage/usb-net-qmi-wwan
   TITLE:=QMI WWAN driver
   KCONFIG:=CONFIG_USB_NET_QMI_WWAN
   FILES:= $(LINUX_DIR)/drivers/$(USBNET_DIR)/qmi_wwan.ko
-  AUTOLOAD:=$(call AutoProbe,qmi_wwan)
+  #AUTOLOAD:=$(call AutoProbe,qmi_wwan)
   $(call AddDepends/usb-net,+kmod-usb-wdm)
 endef
 
@@ -1171,7 +1171,7 @@ define KernelPackage/usb-net-rndis
   TITLE:=Support for RNDIS connections
   KCONFIG:=CONFIG_USB_NET_RNDIS_HOST
   FILES:= $(LINUX_DIR)/drivers/$(USBNET_DIR)/rndis_host.ko
-  AUTOLOAD:=$(call AutoProbe,rndis_host)
+  #AUTOLOAD:=$(call AutoProbe,rndis_host)
   $(call AddDepends/usb-net,+kmod-usb-net-cdc-ether)
 endef
 
@@ -1188,7 +1188,7 @@ define KernelPackage/usb-net-cdc-mbim
   KCONFIG:=CONFIG_USB_NET_CDC_MBIM
   FILES:= \
    $(LINUX_DIR)/drivers/$(USBNET_DIR)/cdc_mbim.ko
-  AUTOLOAD:=$(call AutoProbe,cdc_mbim)
+  #AUTOLOAD:=$(call AutoProbe,cdc_mbim)
   $(call AddDepends/usb-net,+kmod-usb-wdm +kmod-usb-net-cdc-ncm)
 endef
 
@@ -1203,7 +1203,7 @@ define KernelPackage/usb-net-cdc-ncm
   TITLE:=Support for CDC NCM connections
   KCONFIG:=CONFIG_USB_NET_CDC_NCM
   FILES:= $(LINUX_DIR)/drivers/$(USBNET_DIR)/cdc_ncm.ko
-  AUTOLOAD:=$(call AutoProbe,cdc_ncm)
+  #AUTOLOAD:=$(call AutoProbe,cdc_ncm)
   $(call AddDepends/usb-net)
 endef
 
@@ -1218,7 +1218,7 @@ define KernelPackage/usb-net-huawei-cdc-ncm
   TITLE:=Support for Huawei CDC NCM connections
   KCONFIG:=CONFIG_USB_NET_HUAWEI_CDC_NCM
   FILES:= $(LINUX_DIR)/drivers/$(USBNET_DIR)/huawei_cdc_ncm.ko
-  AUTOLOAD:=$(call AutoProbe,huawei_cdc_ncm)
+  #AUTOLOAD:=$(call AutoProbe,huawei_cdc_ncm)
   $(call AddDepends/usb-net,+kmod-usb-net-cdc-ncm +kmod-usb-wdm)
 endef
 

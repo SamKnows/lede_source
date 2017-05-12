@@ -37,7 +37,7 @@ define KernelPackage/crypto-hash
   TITLE:=CryptoAPI hash support
   KCONFIG:=CONFIG_CRYPTO_HASH
   FILES:=$(LINUX_DIR)/crypto/crypto_hash.ko
-  AUTOLOAD:=$(call AutoLoad,02,crypto_hash,1)
+  #AUTOLOAD:=$(call AutoLoad,02,crypto_hash,1)
   $(call AddDepends/crypto)
 endef
 
@@ -300,7 +300,7 @@ define KernelPackage/crypto-crc32c
   DEPENDS:=+kmod-crypto-hash
   KCONFIG:=CONFIG_CRYPTO_CRC32C
   FILES:=$(LINUX_DIR)/crypto/crc32c_generic.ko
-  AUTOLOAD:=$(call AutoLoad,04,crc32c_generic,1)
+  #AUTOLOAD:=$(call AutoLoad,04,crc32c_generic,1)
   $(call AddDepends/crypto)
 endef
 

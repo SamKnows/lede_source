@@ -12,7 +12,7 @@ define KernelPackage/lib-crc-ccitt
   TITLE:=CRC-CCITT support
   KCONFIG:=CONFIG_CRC_CCITT
   FILES:=$(LINUX_DIR)/lib/crc-ccitt.ko
-  AUTOLOAD:=$(call AutoProbe,crc-ccitt)
+  #AUTOLOAD:=$(call AutoProbe,crc-ccitt)
 endef
 
 define KernelPackage/lib-crc-ccitt/description
@@ -72,7 +72,7 @@ define KernelPackage/lib-crc16
   TITLE:=CRC16 support
   KCONFIG:=CONFIG_CRC16
   FILES:=$(LINUX_DIR)/lib/crc16.ko
-  AUTOLOAD:=$(call AutoLoad,20,crc16,1)
+  #AUTOLOAD:=$(call AutoLoad,20,crc16,1)
 endef
 
 define KernelPackage/lib-crc16/description

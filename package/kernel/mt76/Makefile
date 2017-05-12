@@ -57,7 +57,7 @@ define KernelPackage/mt7603
   DEPENDS+=+kmod-mt76-core
   FILES:=\
 	$(PKG_BUILD_DIR)/mt7603e.ko
-  AUTOLOAD:=$(call AutoLoad,51,mt7603e)
+  #AUTOLOAD:=$(call AutoLoad,51,mt7603e)
 endef
 
 NOSTDINC_FLAGS = \

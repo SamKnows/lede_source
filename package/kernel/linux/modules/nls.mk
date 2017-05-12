@@ -24,7 +24,7 @@ define KernelPackage/nls-cp437
   TITLE:=Codepage 437 (United States, Canada)
   KCONFIG:=CONFIG_NLS_CODEPAGE_437
   FILES:=$(LINUX_DIR)/fs/nls/nls_cp437.ko
-  AUTOLOAD:=$(call AutoLoad,25,nls_cp437)
+  #AUTOLOAD:=$(call AutoLoad,25,nls_cp437)
   $(call AddDepends/nls)
 endef
 
@@ -216,7 +216,7 @@ define KernelPackage/nls-iso8859-1
   TITLE:=ISO 8859-1 (Latin 1; Western European Languages)
   KCONFIG:=CONFIG_NLS_ISO8859_1
   FILES:=$(LINUX_DIR)/fs/nls/nls_iso8859-1.ko
-  AUTOLOAD:=$(call AutoLoad,25,nls_iso8859-1)
+  #AUTOLOAD:=$(call AutoLoad,25,nls_iso8859-1)
   $(call AddDepends/nls)
 endef
 
@@ -328,7 +328,7 @@ define KernelPackage/nls-utf8
   TITLE:=UTF-8
   KCONFIG:=CONFIG_NLS_UTF8
   FILES:=$(LINUX_DIR)/fs/nls/nls_utf8.ko
-  AUTOLOAD:=$(call AutoLoad,25,nls_utf8)
+  #AUTOLOAD:=$(call AutoLoad,25,nls_utf8)
   $(call AddDepends/nls)
 endef
 

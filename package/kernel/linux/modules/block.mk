@@ -460,7 +460,7 @@ define KernelPackage/scsi-core
   FILES:= \
 	$(LINUX_DIR)/drivers/scsi/scsi_mod.ko \
 	$(LINUX_DIR)/drivers/scsi/sd_mod.ko
-  AUTOLOAD:=$(call AutoLoad,40,scsi_mod sd_mod,1)
+  #AUTOLOAD:=$(call AutoLoad,40,scsi_mod sd_mod,1)
 endef
 
 $(eval $(call KernelPackage,scsi-core))
@@ -474,7 +474,7 @@ define KernelPackage/scsi-generic
 	CONFIG_CHR_DEV_SG
   FILES:= \
 	$(LINUX_DIR)/drivers/scsi/sg.ko
-  AUTOLOAD:=$(call AutoLoad,65,sg)
+  #AUTOLOAD:=$(call AutoLoad,65,sg)
 endef
 
 $(eval $(call KernelPackage,scsi-generic))
@@ -490,7 +490,7 @@ define KernelPackage/scsi-cdrom
   FILES:= \
     $(LINUX_DIR)/drivers/cdrom/cdrom.ko \
     $(LINUX_DIR)/drivers/scsi/sr_mod.ko
-  AUTOLOAD:=$(call AutoLoad,45,sr_mod)
+  #AUTOLOAD:=$(call AutoLoad,45,sr_mod)
 endef
 
 $(eval $(call KernelPackage,scsi-cdrom))
