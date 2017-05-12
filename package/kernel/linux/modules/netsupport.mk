@@ -208,7 +208,7 @@ define KernelPackage/ipip
   DEPENDS:=+kmod-iptunnel +kmod-iptunnel4
   KCONFIG:=CONFIG_NET_IPIP
   FILES:=$(LINUX_DIR)/net/ipv4/ipip.ko
-  AUTOLOAD:=$(call AutoLoad,32,ipip)
+  #AUTOLOAD:=$(call AutoLoad,32,ipip)
 endef
 
 define KernelPackage/ipip/description
@@ -341,7 +341,7 @@ define KernelPackage/iptunnel
   KCONFIG:= \
 	CONFIG_NET_IP_TUNNEL
   FILES:=$(LINUX_DIR)/net/ipv4/ip_tunnel.ko
-  AUTOLOAD:=$(call AutoLoad,31,ip_tunnel)
+  #AUTOLOAD:=$(call AutoLoad,31,ip_tunnel)
 endef
 
 define KernelPackage/iptunnel/description
@@ -407,7 +407,7 @@ define KernelPackage/iptunnel4
 	CONFIG_INET_TUNNEL \
 	CONFIG_NET_IPIP=m
   FILES:=$(LINUX_DIR)/net/ipv4/tunnel4.ko
-  AUTOLOAD:=$(call AutoLoad,31,tunnel4)
+  #AUTOLOAD:=$(call AutoLoad,31,tunnel4)
 endef
 
 define KernelPackage/iptunnel4/description
@@ -547,7 +547,7 @@ define KernelPackage/tun
   TITLE:=Universal TUN/TAP driver
   KCONFIG:=CONFIG_TUN
   FILES:=$(LINUX_DIR)/drivers/net/tun.ko
-  AUTOLOAD:=$(call AutoLoad,30,tun)
+  #AUTOLOAD:=$(call AutoLoad,30,tun)
 endef
 
 define KernelPackage/tun/description
@@ -596,7 +596,7 @@ define KernelPackage/ppp
   FILES:= \
 	$(LINUX_DIR)/drivers/net/ppp/ppp_async.ko \
 	$(LINUX_DIR)/drivers/net/ppp/ppp_generic.ko
-  AUTOLOAD:=$(call AutoProbe,ppp_async)
+  #AUTOLOAD:=$(call AutoProbe,ppp_async)
 endef
 
 define KernelPackage/ppp/description
@@ -643,7 +643,7 @@ define KernelPackage/pppoe
   DEPENDS:=kmod-ppp +kmod-pppox
   KCONFIG:=CONFIG_PPPOE
   FILES:=$(LINUX_DIR)/drivers/net/ppp/pppoe.ko
-  AUTOLOAD:=$(call AutoProbe,pppoe)
+  #AUTOLOAD:=$(call AutoProbe,pppoe)
 endef
 
 define KernelPackage/pppoe/description
@@ -762,7 +762,7 @@ define KernelPackage/sched-core
 	CONFIG_NET_EMATCH=y \
 	CONFIG_NET_EMATCH_U32
   FILES:=$(SCHED_FILES)
-  AUTOLOAD:=$(call AutoLoad,70, $(SCHED_MODULES_CORE))
+  #AUTOLOAD:=$(call AutoLoad,70, $(SCHED_MODULES_CORE))
 endef
 
 define KernelPackage/sched-core/description
@@ -905,7 +905,7 @@ define KernelPackage/sched
 	CONFIG_NET_EMATCH_META \
 	CONFIG_NET_EMATCH_TEXT
   FILES:=$(SCHED_FILES_EXTRA)
-  AUTOLOAD:=$(call AutoLoad,73, $(SCHED_MODULES_EXTRA))
+  #AUTOLOAD:=$(call AutoLoad,73, $(SCHED_MODULES_EXTRA))
 endef
 
 define KernelPackage/sched/description
@@ -973,7 +973,7 @@ define KernelPackage/pktgen
   TITLE:=Network packet generator
   KCONFIG:=CONFIG_NET_PKTGEN
   FILES:=$(LINUX_DIR)/net/core/pktgen.ko
-  AUTOLOAD:=$(call AutoLoad,99,pktgen)
+  #AUTOLOAD:=$(call AutoLoad,99,pktgen)
 endef
 
 define KernelPackage/pktgen/description
@@ -1084,7 +1084,7 @@ define KernelPackage/netem
   DEPENDS:=+kmod-sched
   KCONFIG:=CONFIG_NET_SCH_NETEM
   FILES:=$(LINUX_DIR)/net/sched/sch_netem.ko
-  AUTOLOAD:=$(call AutoLoad,99,netem)
+  #AUTOLOAD:=$(call AutoLoad,99,netem)
 endef
 
 define KernelPackage/netem/description
