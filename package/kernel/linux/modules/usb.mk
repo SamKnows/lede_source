@@ -19,7 +19,7 @@ define KernelPackage/usb-core
   FILES:= \
 	$(LINUX_DIR)/drivers/usb/core/usbcore.ko \
 	$(LINUX_DIR)/drivers/usb/common/usb-common.ko
-  AUTOLOAD:=$(call AutoLoad,20,usb-common usbcore,1)
+  #AUTOLOAD:=$(call AutoLoad,20,usb-common usbcore,1)
   $(call AddDepends/nls)
 endef
 
@@ -40,7 +40,7 @@ define KernelPackage/usb-ledtrig-usbport
   TITLE:=LED trigger for USB ports
   KCONFIG:=CONFIG_USB_LEDS_TRIGGER_USBPORT
   FILES:=$(LINUX_DIR)/drivers/usb/core/ledtrig-usbport.ko
-  AUTOLOAD:=$(call AutoLoad,50,ledtrig-usbport)
+  #AUTOLOAD:=$(call AutoLoad,50,ledtrig-usbport)
   $(call AddDepends/usb)
 endef
 
@@ -97,7 +97,7 @@ define KernelPackage/phy-ath79-usb
   HIDDEN:=1
   FILES:=$(LINUX_DIR)/drivers/phy/phy-ar7100-usb.ko \
 	$(LINUX_DIR)/drivers/phy/phy-ar7200-usb.ko
-  AUTOLOAD:=$(call AutoLoad,21,phy-ar7100-usb phy-ar7200-usb,1)
+  #AUTOLOAD:=$(call AutoLoad,21,phy-ar7100-usb phy-ar7200-usb,1)
   $(call AddDepends/usb)
 endef
 
@@ -363,7 +363,7 @@ define KernelPackage/usb-ehci
 	CONFIG_USB_EHCI_HCD
   FILES:= \
 	$(LINUX_DIR)/drivers/usb/host/ehci-hcd.ko
-  AUTOLOAD:=$(call AutoLoad,35,ehci-hcd,1)
+  #AUTOLOAD:=$(call AutoLoad,35,ehci-hcd,1)
   $(call AddDepends/usb)
 endef
 $(eval $(call KernelPackage,usb-ehci))
@@ -400,7 +400,7 @@ define KernelPackage/usb2
   ifneq ($(wildcard $(LINUX_DIR)/drivers/usb/host/fsl-mph-dr-of.ko),)
     FILES+=$(LINUX_DIR)/drivers/usb/host/fsl-mph-dr-of.ko
   endif
-  AUTOLOAD:=$(call AutoLoad,40,ehci-hcd ehci-platform ehci-orion ehci-atmel ehci-fsl fsl-mph-dr-of,1)
+  #AUTOLOAD:=$(call AutoLoad,40,ehci-hcd ehci-platform ehci-orion ehci-atmel ehci-fsl fsl-mph-dr-of,1)
   $(call AddDepends/usb)
 endef
 

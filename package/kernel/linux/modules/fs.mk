@@ -192,7 +192,7 @@ define KernelPackage/fs-ext4
 	$(LINUX_DIR)/fs/ext4/ext4.ko \
 	$(LINUX_DIR)/fs/jbd2/jbd2.ko \
 	$(LINUX_DIR)/fs/mbcache.ko
-  AUTOLOAD:=$(call AutoLoad,30,mbcache jbd2 ext4,1)
+  #AUTOLOAD:=$(call AutoLoad,30,mbcache jbd2 ext4,1)
 endef
 
 define KernelPackage/fs-ext4/description
@@ -468,7 +468,7 @@ define KernelPackage/fs-ntfs
   TITLE:=NTFS filesystem support
   KCONFIG:=CONFIG_NTFS_FS
   FILES:=$(LINUX_DIR)/fs/ntfs/ntfs.ko
-  AUTOLOAD:=$(call AutoLoad,30,ntfs)
+  #AUTOLOAD:=$(call AutoLoad,30,ntfs)
   $(call AddDepends/nls)
 endef
 
@@ -537,7 +537,7 @@ define KernelPackage/fs-vfat
   FILES:= \
 	$(LINUX_DIR)/fs/fat/fat.ko \
 	$(LINUX_DIR)/fs/fat/vfat.ko
-  AUTOLOAD:=$(call AutoLoad,30,fat vfat)
+  #AUTOLOAD:=$(call AutoLoad,30,fat vfat)
   $(call AddDepends/nls,cp437 iso8859-1 utf8)
 endef
 
