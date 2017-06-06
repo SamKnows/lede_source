@@ -1,0 +1,23 @@
+--- a/dns.c
++++ b/dns.c
+@@ -393,6 +393,20 @@ parse_question(struct interface *iface,
+ 		}
+ 		break;
+ 
++	case TYPE_SRV:
++		{
++		/* First dot separates instance name from the rest */
++		const char *dot = strchr(name, '.');
++		/* Length of queried instance */
++		size_t len = dot ? dot - name : 0;
++
++		/* Make sure it's query for the instance name we use */
++		if (len && len == strlen(umdns_host_label) &&
++		    !strncmp(name, umdns_host_label, len))
++			service_reply(iface, to, NULL, dot + 1, announce_ttl);
++		}
++		break;
++
+ 	case TYPE_AAAA:
+ 	case TYPE_A:
+ 		host = strstr(name, ".local");
