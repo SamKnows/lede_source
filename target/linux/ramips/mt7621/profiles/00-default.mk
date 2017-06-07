@@ -8,9 +8,7 @@
 define Profile/Default
 	NAME:=Default Profile
 	PRIORITY:=1
-	PACKAGES:=\
-		kmod-usb-core kmod-usb3 \
-		kmod-usb-ledtrig-usbport
+	PACKAGES:=
 endef
 
 define Profile/Default/Description

@@ -5,10 +5,8 @@
 SUBTARGET:=mt7621
 BOARDNAME:=MT7621 based boards
 DEVICE_TYPE:=samknows
-FEATURES+=nand ramdisk rtc usb
+FEATURES+=nand ramdisk rtc
 CPU_TYPE:=1004kc
-
-DEFAULT_PACKAGES += kmod-mt76
 
 KERNEL_PATCHVER:=4.4
 
