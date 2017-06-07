@@ -77,9 +77,14 @@
 		};
 
 		partition@50000 {
-			label = "firmware";
-			reg = <0x50000 0xfb0000>;
+			label = "mainimage";
+			reg = <0x50000 0xde0000>;
 		};
+
+                partition@e30000 {
+                        label = "firmware";
+                        reg = <0xe30000 0x1d0000>;
+                };
 
 	};
 };
