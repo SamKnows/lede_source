@@ -1,0 +1,22 @@
+UNIT_MODEL=skwb8
+
+. /lib/functions/leds.sh
+
+STATUS_LED1="sk-wb8:green:wps"
+STATUS_LED2="sk-wb8:green:usb"
+
+led_set_preparing() {
+    led_off $STATUS_LED1
+    led_timer $STATUS_LED2 500 500
+}
+
+led_set_downloading() {
+    led_timer $STATUS_LED1 1000 1000
+    sleep 1
+    led_timer $STATUS_LED2 1000 1000
+}
+
+led_set_flashing() {
+    led_timer $STATUS_LED1 200 200
+    led_timer $STATUS_LED2 200 200
+}

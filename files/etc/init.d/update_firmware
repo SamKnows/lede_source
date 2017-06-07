@@ -1,0 +1,12 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+start() {
+	(sleep 10
+	for I in $(seq 10); do
+	        /usr/sbin/update_firmware.sh
+		sleep 60
+	done
+	reboot -n -f)&
+}
