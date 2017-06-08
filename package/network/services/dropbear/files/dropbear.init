@@ -78,7 +78,7 @@ dropbear_instance()
 	append_ports "${ipaddrs}" "${Port}"
 	[ "${IdleTimeout}" -ne 0 ] && procd_append_param command -I "${IdleTimeout}"
 	[ "${SSHKeepAlive}" -ne 0 ] && procd_append_param command -K "${SSHKeepAlive}"
-	[ "${mdns}" -ne 0 ] && procd_add_mdns "ssh" "tcp" "$Port" "daemon=dropbear"
+	[ "${mdns}" -ne 0 ] && procd_add_mdns "ssh" "tcp" "$Port" ""
 	procd_set_param respawn
 	procd_close_instance
 }
