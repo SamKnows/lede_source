@@ -1,0 +1,39 @@
+From a7c04d8029e3f4c8b4e01b73502e885494132d8c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Karel=20Ko=C4=8D=C3=AD?= <karel.koci@nic.cz>
+Date: Mon, 11 Mar 2019 13:21:04 +0100
+Subject: [PATCH] Reenable Turris Omnia second ethernet connection to switch
+
+When we disable this link we not only cause all links to be shifted
+down it also causes for some reason null pointer dereference kernel
+panic on phy0 reconfiguration.
+---
+ arch/arm/boot/dts/armada-385-turris-omnia.dtsi | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/boot/dts/armada-385-turris-omnia.dtsi b/arch/arm/boot/dts/armada-385-turris-omnia.dtsi
+index e216c653e013..17146f7af49b 100644
+--- a/arch/arm/boot/dts/armada-385-turris-omnia.dtsi
++++ b/arch/arm/boot/dts/armada-385-turris-omnia.dtsi
+@@ -115,9 +115,8 @@
+ 	};
+ };
+ 
+-/* Disable eth0 unless there is DSA driver supporting two CPU ports. */
+ /* Connected to 88E6176 switch, port 6 */
+-/* &eth0 {
++&eth0 {
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&ge0_rgmii_pins>;
+ 	status = "okay";
+@@ -127,7 +126,7 @@
+ 		speed = <1000>;
+ 		full-duplex;
+ 	};
+-}; */
++};
+ 
+ /* Connected to 88E6176 switch, port 5 */
+ &eth1 {
+-- 
+2.21.0
+

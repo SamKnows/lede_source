@@ -1,5 +1,10 @@
 if TARGET_mvebu
 
+config KERNEL_LEDS_OMNIA
+	bool "Build Turris Omnia LEDS support to kernel"
+	default y if TARGET_mvebu_cortexa9_DEVICE_cznic_turris-omnia
+	default n
+
 config TURRIS_MOX_KERNEL
 	bool
 	prompt "Turris MOX kernel extensions"
