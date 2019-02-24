@@ -1,0 +1,46 @@
+From 07e2e362bb3b7e8f854e839807b1725dbce3c50c Mon Sep 17 00:00:00 2001
+From: Tomas Hlavacek <tmshlvck@gmail.com>
+Date: Sun, 24 Feb 2019 00:22:39 +0100
+Subject: [PATCH] Slow down SDIO
+
+---
+ drivers/mmc/core/sdio.c | 19 ++++++++++++-------
+ 1 file changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/mmc/core/sdio.c b/drivers/mmc/core/sdio.c
+index d8e17ea6126d..a2534e27e4bf 100644
+--- a/drivers/mmc/core/sdio.c
++++ b/drivers/mmc/core/sdio.c
+@@ -160,17 +160,22 @@ static int sdio_read_cccr(struct mmc_card *card, u32 ocr)
+ 				goto out;
+ 
+ 			if (mmc_host_uhs(card->host)) {
+-				if (data & SDIO_UHS_DDR50)
+-					card->sw_caps.sd3_bus_mode
+-						|= SD_MODE_UHS_DDR50;
+-
+-				if (data & SDIO_UHS_SDR50)
++				if (data & SDIO_UHS_DDR50) {
++					printk("%s card report SDIO_UHS_DDR50\n", __func__);
++					card->sw_caps.sd3_bus_mode
++						|= SD_MODE_UHS_DDR50;
++				}
++
++				if (data & SDIO_UHS_SDR50) {
++					printk("%s card report SDIO_UHS_SDR50\n", __func__);
+ 					card->sw_caps.sd3_bus_mode
+ 						|= SD_MODE_UHS_SDR50;
++				}
+ 
+ 				if (data & SDIO_UHS_SDR104)
+-					card->sw_caps.sd3_bus_mode
+-						|= SD_MODE_UHS_SDR104;
++					printk("%s card report SDIO_UHS_SDR104\n", __func__);
++					/*card->sw_caps.sd3_bus_mode
++						|= SD_MODE_UHS_SDR104;*/
+ 			}
+ 
+ 			ret = mmc_io_rw_direct(card, 0, 0,
+-- 
+2.19.1
+
