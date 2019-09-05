@@ -1,0 +1,58 @@
+diff -Naurp a/arch/arm/boot/dts/armada-385-turris-omnia.dtsi b/arch/arm/boot/dts/armada-385-turris-omnia.dtsi
+--- a/arch/arm/boot/dts/armada-385-turris-omnia.dtsi	2019-08-22 10:27:11.626341612 +0200
++++ b/arch/arm/boot/dts/armada-385-turris-omnia.dtsi	2019-08-27 19:54:51.811729285 +0200
+@@ -369,29 +369,34 @@
+ 			ports@0 {
+ 				reg = <0>;
+ 				label = "lan0";
++				cpu = <&cpu_port5>;
+ 			};
+ 
+ 			ports@1 {
+ 				reg = <1>;
+ 				label = "lan1";
++				cpu = <&cpu_port5>;
+ 			};
+ 
+ 			ports@2 {
+ 				reg = <2>;
+ 				label = "lan2";
++				cpu = <&cpu_port5>;
+ 			};
+ 
+ 			ports@3 {
+ 				reg = <3>;
+ 				label = "lan3";
++				cpu = <&cpu_port5>;
+ 			};
+ 
+ 			ports@4 {
+ 				reg = <4>;
+ 				label = "lan4";
++				cpu = <&cpu_port6>;
+ 			};
+ 
+-			ports@5 {
++			cpu_port5: ports@5 {
+ 				reg = <5>;
+ 				label = "cpu";
+ 				ethernet = <&eth1>;
+@@ -403,7 +408,17 @@
+ 				};
+ 			};
+ 
+-			/* port 6 is connected to eth0 */
++			cpu_port6: ports@6 {
++				reg = <6>;
++				label = "cpu";
++				ethernet = <&eth0>;
++				phy-mode = "rgmii-id";
++
++				fixed-link {
++					speed = <1000>;
++					full-duplex;
++				};
++			};
+ 		};
+ 	};
+ };
