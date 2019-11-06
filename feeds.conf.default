@@ -2,4 +2,4 @@ src-git packages https://git.openwrt.org/feed/packages.git^5779614d267732fc382c1
 src-git luci https://git.openwrt.org/project/luci.git^4d6d8bc5b0d7ee71c7b29b12e7e0c2e1e86cb268
 src-git routing https://git.openwrt.org/feed/routing.git^bb156bf355b54236a52279522fabbec1e8dd7043
 src-git telephony https://git.openwrt.org/feed/telephony.git^507eabe1b60458ceb1a535aec9d12c8be95706f0
-src-git datausage_packages git@github.com:SamKnows/datausage_openwrt_packages.git^7240a859d0703b28d4029ee43cbc9a92a71021a6
+src-git datausage_packages git@github.com:SamKnows/datausage_openwrt_packages.git^e8fe43688f9725a586d150bf0f976d7e5749f9eb
