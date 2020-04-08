@@ -3,6 +3,7 @@ include $(TOPDIR)/rules.mk
 ARCH:=mips
 BOARD:=ath79
 BOARDNAME:=Atheros ATH79 (DTS)
+DEVICE_TYPE:=samknows
 CPU_TYPE:=24kc
 SUBTARGETS:=generic nand tiny
 
