@@ -212,14 +212,16 @@ ath79_setup_interfaces()
 	tplink,tl-wdr4310-v1|\
 	tplink,tl-wr941n-v7-cn)
 		ucidef_add_switch "switch0" \
-			"0@eth0" "2:lan:1" "3:lan:2" "4:lan:3" "5:lan:4" "1:wan"
+			"0u@eth0" "2:wan:1" "3:wan:2" "4:wan:3" "5:wan:4" "1:wan:5"
+		ucidef_set_ar8xxx_switch_mib "switch0" 0 2000
 		;;
 	tplink,archer-c5-v1|\
 	tplink,archer-c7-v1|\
 	tplink,archer-c7-v2|\
 	tplink,tl-wdr4900-v2)
 		ucidef_add_switch "switch0" \
-			"0@eth1" "2:lan" "3:lan" "4:lan" "5:lan" "6@eth0" "1:wan"
+			"1:wan" "2:wan" "3:wan" "4:wan" "5:wan" "6u@eth0"
+		ucidef_set_ar8xxx_switch_mib "switch0" 0 2000
 		;;
 	tplink,archer-d50-v1)
 		ucidef_add_switch "switch0" \

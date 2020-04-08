@@ -203,7 +203,7 @@ ucidef_add_switch() {
 
 	json_select_object switch
 		json_select_object "$name"
-			json_add_boolean enable 1
+			json_add_boolean enable 0
 			json_add_boolean reset 1
 
 			for port in "$@"; do
