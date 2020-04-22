@@ -1,0 +1,35 @@
+From f824118314de0dc82137ce531dc5fdcf4739e77d Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Thu, 14 Dec 2017 15:26:48 +0100
+Subject: [PATCH 007/126] crypto: inside-secure - EBUSY is not an error on
+ async request
+
+When initializing the IVs crypto_ahash_update() is called, which at some
+point will call crypto_enqueue_request(). This function can return
+-EBUSY when no resource is available and the request is queued. Since
+this is a valid case, -EBUSY shouldn't be treated as an error.
+
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+[Antoine: commit message]
+Signed-off-by: Antoine Tenart <antoine.tenart@free-electrons.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/inside-secure/safexcel_hash.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/crypto/inside-secure/safexcel_hash.c b/drivers/crypto/inside-secure/safexcel_hash.c
+index 955c242da244..f32985e56668 100644
+--- a/drivers/crypto/inside-secure/safexcel_hash.c
++++ b/drivers/crypto/inside-secure/safexcel_hash.c
+@@ -870,7 +870,7 @@ static int safexcel_hmac_init_iv(struct ahash_request *areq,
+ 	req->last_req = true;
+ 
+ 	ret = crypto_ahash_update(areq);
+-	if (ret && ret != -EINPROGRESS)
++	if (ret && ret != -EINPROGRESS && ret != -EBUSY)
+ 		return ret;
+ 
+ 	wait_for_completion_interruptible(&result.completion);
+-- 
+2.21.0
+

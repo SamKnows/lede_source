@@ -1,0 +1,41 @@
+From d0bda55c7cc657e8f556bd3eacd304a1ebc54873 Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Sat, 17 Mar 2018 20:32:03 +0100
+Subject: [PATCH 099/126] net: dsa: mv88e6xxx: Add missing g1 IRQ numbers
+
+With the recent change to polling for interrupts, it is important that
+the number of global 1 interrupts is listed. Without it, the driver
+requests an interrupt domain for zero interrupts, which returns
+EINVAL, and the probe fails.
+
+Add two missing entries.
+
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 0bf5de536880..6136be3bb58c 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -3694,6 +3694,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 3750,
+ 		.atu_move_port_mask = 0x1f,
++		.g1_irqs = 9,
+ 		.g2_irqs = 10,
+ 		.pvt = true,
+ 		.multi_chip = true,
+@@ -3988,6 +3989,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 3750,
+ 		.atu_move_port_mask = 0x1f,
++		.g1_irqs = 9,
+ 		.g2_irqs = 10,
+ 		.pvt = true,
+ 		.multi_chip = true,
+-- 
+2.21.0
+

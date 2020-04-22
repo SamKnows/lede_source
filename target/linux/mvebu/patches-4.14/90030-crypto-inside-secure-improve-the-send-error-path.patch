@@ -1,0 +1,50 @@
+From 494622bc98b372c6bce8aeea1905924957490720 Mon Sep 17 00:00:00 2001
+From: Antoine Tenart <antoine.tenart@bootlin.com>
+Date: Mon, 19 Mar 2018 09:21:16 +0100
+Subject: [PATCH 030/126] crypto: inside-secure - improve the send error path
+
+This patch improves the send error path as it wasn't handling all error
+cases. A new label is added, and some of the goto are updated to point
+to the right labels, so that the code is more robust to errors.
+
+Signed-off-by: Antoine Tenart <antoine.tenart@bootlin.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/inside-secure/safexcel_hash.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/crypto/inside-secure/safexcel_hash.c b/drivers/crypto/inside-secure/safexcel_hash.c
+index cfcae5e51b9d..4ff3f7615b3d 100644
+--- a/drivers/crypto/inside-secure/safexcel_hash.c
++++ b/drivers/crypto/inside-secure/safexcel_hash.c
+@@ -281,7 +281,7 @@ static int safexcel_ahash_send_req(struct crypto_async_request *async, int ring,
+ 					   sglen, len, ctx->base.ctxr_dma);
+ 		if (IS_ERR(cdesc)) {
+ 			ret = PTR_ERR(cdesc);
+-			goto cdesc_rollback;
++			goto unmap_sg;
+ 		}
+ 		n_cdesc++;
+ 
+@@ -305,7 +305,7 @@ static int safexcel_ahash_send_req(struct crypto_async_request *async, int ring,
+ 					 DMA_FROM_DEVICE);
+ 	if (dma_mapping_error(priv->dev, req->result_dma)) {
+ 		ret = -EINVAL;
+-		goto cdesc_rollback;
++		goto unmap_sg;
+ 	}
+ 
+ 	/* Add a result descriptor */
+@@ -326,6 +326,9 @@ static int safexcel_ahash_send_req(struct crypto_async_request *async, int ring,
+ 	return 0;
+ 
+ unmap_result:
++	dma_unmap_single(priv->dev, req->result_dma, req->state_sz,
++			 DMA_FROM_DEVICE);
++unmap_sg:
+ 	dma_unmap_sg(priv->dev, areq->src, req->nents, DMA_TO_DEVICE);
+ cdesc_rollback:
+ 	for (i = 0; i < n_cdesc; i++)
+-- 
+2.21.0
+

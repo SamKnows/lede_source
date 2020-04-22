@@ -1,0 +1,38 @@
+From 938939e81b621c102b10022f9ae070ade0d9df83 Mon Sep 17 00:00:00 2001
+From: Colin Ian King <colin.king@canonical.com>
+Date: Tue, 16 Jan 2018 08:41:58 +0100
+Subject: [PATCH 018/126] crypto: inside-secure - make function
+ safexcel_try_push_requests static
+
+The function safexcel_try_push_requests  is local to the source and does
+not need to be in global scope, so make it static.
+
+Cleans up sparse warning:
+symbol 'safexcel_try_push_requests' was not declared. Should it be static?
+
+Signed-off-by: Colin Ian King <colin.king@canonical.com>
+[Antoine: fixed alignment]
+Signed-off-by: Antoine Tenart <antoine.tenart@free-electrons.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/inside-secure/safexcel.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/crypto/inside-secure/safexcel.c b/drivers/crypto/inside-secure/safexcel.c
+index b0787f5f62ad..46b691aae475 100644
+--- a/drivers/crypto/inside-secure/safexcel.c
++++ b/drivers/crypto/inside-secure/safexcel.c
+@@ -432,8 +432,8 @@ static int safexcel_hw_init(struct safexcel_crypto_priv *priv)
+ }
+ 
+ /* Called with ring's lock taken */
+-int safexcel_try_push_requests(struct safexcel_crypto_priv *priv, int ring,
+-			       int reqs)
++static int safexcel_try_push_requests(struct safexcel_crypto_priv *priv,
++				      int ring, int reqs)
+ {
+ 	int coal = min_t(int, reqs, EIP197_MAX_BATCH_SZ);
+ 
+-- 
+2.21.0
+

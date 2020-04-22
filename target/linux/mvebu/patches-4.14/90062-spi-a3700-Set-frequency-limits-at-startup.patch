@@ -1,0 +1,46 @@
+From ef6b6b8555c181df8e40994ae0cac82bd7ca08f6 Mon Sep 17 00:00:00 2001
+From: Maxime Chevallier <maxime.chevallier@smile.fr>
+Date: Wed, 17 Jan 2018 17:15:26 +0100
+Subject: [PATCH 062/126] spi: a3700: Set frequency limits at startup
+
+Armada 3700 SPI controller has an internal clock divider which can
+divide the parent clock frequency by up to 30.
+
+This patch sets the limits in the spi_controller fields so that we can
+detect when a non-supported frequency is requested by a device for a
+transfer.
+
+Signed-off-by: Maxime Chevallier <maxime.chevallier@smile.fr>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/spi/spi-armada-3700.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/spi/spi-armada-3700.c b/drivers/spi/spi-armada-3700.c
+index c11ea6c169a4..8048468277f3 100644
+--- a/drivers/spi/spi-armada-3700.c
++++ b/drivers/spi/spi-armada-3700.c
+@@ -27,6 +27,8 @@
+ 
+ #define DRIVER_NAME			"armada_3700_spi"
+ 
++#define A3700_SPI_MAX_SPEED_HZ		100000000
++#define A3700_SPI_MAX_PRESCALE		30
+ #define A3700_SPI_TIMEOUT		10
+ 
+ /* SPI Register Offest */
+@@ -823,6 +825,11 @@ static int a3700_spi_probe(struct platform_device *pdev)
+ 		goto error;
+ 	}
+ 
++	master->max_speed_hz = min_t(unsigned long, A3700_SPI_MAX_SPEED_HZ,
++					clk_get_rate(spi->clk));
++	master->min_speed_hz = DIV_ROUND_UP(clk_get_rate(spi->clk),
++						A3700_SPI_MAX_PRESCALE);
++
+ 	ret = a3700_spi_init(spi);
+ 	if (ret)
+ 		goto error_clk;
+-- 
+2.21.0
+

@@ -1,0 +1,102 @@
+From c4d80b5c828eadf96827ed2b10fb769745898b1a Mon Sep 17 00:00:00 2001
+From: Florian Fainelli <f.fainelli@gmail.com>
+Date: Thu, 10 May 2018 13:17:32 -0700
+Subject: [PATCH 076/126] net: dsa: Add PHYLINK switch operations
+
+In preparation for adding support for PHYLINK within DSA, define a number of
+operations that we will need and that switch drivers can start implementing.
+Proper integration with PHYLINK will follow in subsequent patches.
+
+We start selecting PHYLINK (which implies PHYLIB) in net/dsa/Kconfig
+such that drivers can be guaranteed that this dependency is properly
+taken care of and can start referencing PHYLINK helper functions without
+requiring stubs or anything.
+
+Signed-off-by: Florian Fainelli <f.fainelli@gmail.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ include/net/dsa.h | 24 ++++++++++++++++++++++++
+ net/dsa/Kconfig   |  2 +-
+ net/dsa/slave.c   |  5 +++++
+ 3 files changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/include/net/dsa.h b/include/net/dsa.h
+index dd44d6ce1097..bc8a2b4872dc 100644
+--- a/include/net/dsa.h
++++ b/include/net/dsa.h
+@@ -19,12 +19,14 @@
+ #include <linux/workqueue.h>
+ #include <linux/of.h>
+ #include <linux/ethtool.h>
++#include <linux/phy.h>
+ #include <net/devlink.h>
+ #include <net/switchdev.h>
+ 
+ struct tc_action;
+ struct phy_device;
+ struct fixed_phy_status;
++struct phylink_link_state;
+ 
+ enum dsa_tag_protocol {
+ 	DSA_TAG_PROTO_NONE = 0,
+@@ -313,6 +315,28 @@ struct dsa_switch_ops {
+ 	void	(*fixed_link_update)(struct dsa_switch *ds, int port,
+ 				struct fixed_phy_status *st);
+ 
++	/*
++	 * PHYLINK integration
++	 */
++	void	(*phylink_validate)(struct dsa_switch *ds, int port,
++				    unsigned long *supported,
++				    struct phylink_link_state *state);
++	int	(*phylink_mac_link_state)(struct dsa_switch *ds, int port,
++					  struct phylink_link_state *state);
++	void	(*phylink_mac_config)(struct dsa_switch *ds, int port,
++				      unsigned int mode,
++				      const struct phylink_link_state *state);
++	void	(*phylink_mac_an_restart)(struct dsa_switch *ds, int port);
++	void	(*phylink_mac_link_down)(struct dsa_switch *ds, int port,
++					 unsigned int mode,
++					 phy_interface_t interface);
++	void	(*phylink_mac_link_up)(struct dsa_switch *ds, int port,
++				       unsigned int mode,
++				       phy_interface_t interface,
++				       struct phy_device *phydev);
++	void	(*phylink_fixed_state)(struct dsa_switch *ds, int port,
++				       struct phylink_link_state *state);
++
+ 	/*
+ 	 * ethtool hardware statistics.
+ 	 */
+diff --git a/net/dsa/Kconfig b/net/dsa/Kconfig
+index cc5f8f971689..250254230ebb 100644
+--- a/net/dsa/Kconfig
++++ b/net/dsa/Kconfig
+@@ -8,7 +8,7 @@ config NET_DSA
+ 	tristate "Distributed Switch Architecture"
+ 	depends on HAVE_NET_DSA && MAY_USE_DEVLINK
+ 	select NET_SWITCHDEV
+-	select PHYLIB
++	select PHYLINK
+ 	---help---
+ 	  Say Y if you want to enable support for the hardware switches supported
+ 	  by the Distributed Switch Architecture.
+diff --git a/net/dsa/slave.c b/net/dsa/slave.c
+index b14d530a32b1..cd4925f83ba4 100644
+--- a/net/dsa/slave.c
++++ b/net/dsa/slave.c
+@@ -1130,6 +1130,11 @@ static int dsa_slave_phy_connect(struct dsa_slave_priv *p,
+ 				  p->phy_interface);
+ }
+ 
++void dsa_port_phylink_mac_change(struct dsa_switch *ds, int port, bool up)
++{
++}
++EXPORT_SYMBOL_GPL(dsa_port_phylink_mac_change);
++
+ static int dsa_slave_phy_setup(struct dsa_slave_priv *p,
+ 				struct net_device *slave_dev)
+ {
+-- 
+2.21.0
+

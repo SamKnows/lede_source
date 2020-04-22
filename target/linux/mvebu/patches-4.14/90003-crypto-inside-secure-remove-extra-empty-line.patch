@@ -1,0 +1,28 @@
+From 2290a7921f4f798754e89c171322e912f500505e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Antoine=20T=C3=A9nart?= <antoine.tenart@free-electrons.com>
+Date: Thu, 14 Dec 2017 15:26:43 +0100
+Subject: [PATCH 003/126] crypto: inside-secure - remove extra empty line
+
+Cosmetic patch removing an extra empty line between header inclusions.
+
+Signed-off-by: Antoine Tenart <antoine.tenart@free-electrons.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/inside-secure/safexcel_hash.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/crypto/inside-secure/safexcel_hash.c b/drivers/crypto/inside-secure/safexcel_hash.c
+index c20c4db12190..37e7fcd2f54b 100644
+--- a/drivers/crypto/inside-secure/safexcel_hash.c
++++ b/drivers/crypto/inside-secure/safexcel_hash.c
+@@ -14,7 +14,6 @@
+ #include <linux/dma-mapping.h>
+ #include <linux/dmapool.h>
+ 
+-
+ #include "safexcel.h"
+ 
+ struct safexcel_ahash_ctx {
+-- 
+2.21.0
+

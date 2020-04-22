@@ -1,0 +1,30 @@
+From fdbd3a52cdd843e43d3f0202b2664715f05b715b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Antoine=20T=C3=A9nart?= <antoine.tenart@free-electrons.com>
+Date: Thu, 14 Dec 2017 15:26:45 +0100
+Subject: [PATCH 005/126] crypto: inside-secure - remove useless memset
+
+This patch removes an useless memset in the ahash_export function, as
+the zeroed buffer will be entirely overridden the next line.
+
+Suggested-by: Ofer Heifetz <oferh@marvell.com>
+Signed-off-by: Antoine Tenart <antoine.tenart@free-electrons.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/inside-secure/safexcel_hash.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/crypto/inside-secure/safexcel_hash.c b/drivers/crypto/inside-secure/safexcel_hash.c
+index 50c28da35b0d..8ed46ff4cbf9 100644
+--- a/drivers/crypto/inside-secure/safexcel_hash.c
++++ b/drivers/crypto/inside-secure/safexcel_hash.c
+@@ -642,7 +642,6 @@ static int safexcel_ahash_export(struct ahash_request *areq, void *out)
+ 	export->processed = req->processed;
+ 
+ 	memcpy(export->state, req->state, req->state_sz);
+-	memset(export->cache, 0, crypto_ahash_blocksize(ahash));
+ 	memcpy(export->cache, req->cache, crypto_ahash_blocksize(ahash));
+ 
+ 	return 0;
+-- 
+2.21.0
+

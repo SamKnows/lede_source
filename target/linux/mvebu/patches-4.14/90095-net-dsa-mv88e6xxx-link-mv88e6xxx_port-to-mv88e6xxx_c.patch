@@ -1,0 +1,48 @@
+From cf237556ee1e91fe575767c6fa2342b323aa2af5 Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Thu, 9 Aug 2018 15:38:47 +0200
+Subject: [PATCH 095/126] net: dsa: mv88e6xxx: link mv88e6xxx_port to
+ mv88e6xxx_chip
+
+An up coming change will register interrupts for individual switch
+ports, using the mv88e6xxx_port as the interrupt context information.
+Add members to the mv88e6xxx_port structure so we can link it back to
+the mv88e6xxx_chip member the port belongs to and the port number of
+the port.
+
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 3 +++
+ drivers/net/dsa/mv88e6xxx/chip.h | 2 ++
+ 2 files changed, 5 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 9a4bec1627f1..80b22ecbf6f0 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -1897,6 +1897,9 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+ 	int err;
+ 	u16 reg;
+ 
++	chip->ports[port].chip = chip;
++	chip->ports[port].port = port;
++
+ 	/* MAC Forcing register: don't force link, speed, duplex or flow control
+ 	 * state to any particular values on physical ports, but force the CPU
+ 	 * port and all DSA ports to their maximum bandwidth and full duplex.
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
+index d1f706c27cec..0d93b21157d4 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.h
++++ b/drivers/net/dsa/mv88e6xxx/chip.h
+@@ -155,6 +155,8 @@ struct mv88e6xxx_irq {
+ };
+ 
+ struct mv88e6xxx_port {
++	struct mv88e6xxx_chip *chip;
++	int port;
+ 	u8 cmode;
+ };
+ 
+-- 
+2.21.0
+

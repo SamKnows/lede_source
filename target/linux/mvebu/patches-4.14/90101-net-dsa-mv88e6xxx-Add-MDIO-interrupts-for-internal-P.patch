@@ -1,0 +1,135 @@
+From 2399e39cdbc22cbf937307288f3a580767518bf2 Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Sat, 17 Mar 2018 20:32:05 +0100
+Subject: [PATCH 101/126] net: dsa: mv88e6xxx: Add MDIO interrupts for internal
+ PHYs
+
+When registering an MDIO bus, it is possible to pass an array of
+interrupts, one per address on the bus. phylib will then associate the
+interrupt to the PHY device, if no other interrupt is provided.
+
+Some of the global2 interrupts are PHY interrupts. Place them into the
+MDIO bus structure.
+
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c    | 10 +++++++++
+ drivers/net/dsa/mv88e6xxx/global2.c | 32 +++++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/global2.h | 16 +++++++++++++++
+ 3 files changed, 58 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 40d33a24875f..9f60e8fa8783 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -2511,12 +2511,19 @@ static int mv88e6xxx_mdio_register(struct mv88e6xxx_chip *chip,
+ 	bus->write = mv88e6xxx_mdio_write;
+ 	bus->parent = chip->dev;
+ 
++	if (!external) {
++		err = mv88e6xxx_g2_irq_mdio_setup(chip, bus);
++		if (err)
++			return err;
++	}
++
+ 	if (np)
+ 		err = of_mdiobus_register(bus, np);
+ 	else
+ 		err = mdiobus_register(bus);
+ 	if (err) {
+ 		dev_err(chip->dev, "Cannot register MDIO bus (%d)\n", err);
++		mv88e6xxx_g2_irq_mdio_free(chip, bus);
+ 		return err;
+ 	}
+ 
+@@ -2543,6 +2550,9 @@ static void mv88e6xxx_mdios_unregister(struct mv88e6xxx_chip *chip)
+ 	list_for_each_entry(mdio_bus, &chip->mdios, list) {
+ 		bus = mdio_bus->bus;
+ 
++		if (!mdio_bus->external)
++			mv88e6xxx_g2_irq_mdio_free(chip, bus);
++
+ 		mdiobus_unregister(bus);
+ 	}
+ }
+diff --git a/drivers/net/dsa/mv88e6xxx/global2.c b/drivers/net/dsa/mv88e6xxx/global2.c
+index af0727877825..84dbcfb07f4f 100644
+--- a/drivers/net/dsa/mv88e6xxx/global2.c
++++ b/drivers/net/dsa/mv88e6xxx/global2.c
+@@ -1106,6 +1106,38 @@ int mv88e6xxx_g2_irq_setup(struct mv88e6xxx_chip *chip)
+ 	return err;
+ }
+ 
++int mv88e6xxx_g2_irq_mdio_setup(struct mv88e6xxx_chip *chip,
++				struct mii_bus *bus)
++{
++	int phy, irq, err, err_phy;
++
++	for (phy = 0; phy < chip->info->num_internal_phys; phy++) {
++		irq = irq_find_mapping(chip->g2_irq.domain, phy);
++		if (irq < 0) {
++			err = irq;
++			goto out;
++		}
++		bus->irq[chip->info->port_base_addr + phy] = irq;
++	}
++	return 0;
++out:
++	err_phy = phy;
++
++	for (phy = 0; phy < err_phy; phy++)
++		irq_dispose_mapping(bus->irq[phy]);
++
++	return err;
++}
++
++void mv88e6xxx_g2_irq_mdio_free(struct mv88e6xxx_chip *chip,
++				struct mii_bus *bus)
++{
++	int phy;
++
++	for (phy = 0; phy < chip->info->num_internal_phys; phy++)
++		irq_dispose_mapping(bus->irq[phy]);
++}
++
+ int mv88e6xxx_g2_setup(struct mv88e6xxx_chip *chip)
+ {
+ 	u16 reg;
+diff --git a/drivers/net/dsa/mv88e6xxx/global2.h b/drivers/net/dsa/mv88e6xxx/global2.h
+index 669f59017b12..0835cda2bba6 100644
+--- a/drivers/net/dsa/mv88e6xxx/global2.h
++++ b/drivers/net/dsa/mv88e6xxx/global2.h
+@@ -259,6 +259,11 @@ int mv88e6xxx_g2_setup(struct mv88e6xxx_chip *chip);
+ int mv88e6xxx_g2_irq_setup(struct mv88e6xxx_chip *chip);
+ void mv88e6xxx_g2_irq_free(struct mv88e6xxx_chip *chip);
+ 
++int mv88e6xxx_g2_irq_mdio_setup(struct mv88e6xxx_chip *chip,
++				struct mii_bus *bus);
++void mv88e6xxx_g2_irq_mdio_free(struct mv88e6xxx_chip *chip,
++				struct mii_bus *bus);
++
+ int mv88e6185_g2_mgmt_rsvd2cpu(struct mv88e6xxx_chip *chip);
+ int mv88e6352_g2_mgmt_rsvd2cpu(struct mv88e6xxx_chip *chip);
+ 
+@@ -364,6 +369,17 @@ static inline void mv88e6xxx_g2_irq_free(struct mv88e6xxx_chip *chip)
+ {
+ }
+ 
++static inline int mv88e6xxx_g2_irq_mdio_setup(struct mv88e6xxx_chip *chip,
++					      struct mii_bus *bus)
++{
++	return 0;
++}
++
++static inline void mv88e6xxx_g2_irq_mdio_free(struct mv88e6xxx_chip *chip,
++					      struct mii_bus *bus)
++{
++}
++
+ static inline int mv88e6185_g2_mgmt_rsvd2cpu(struct mv88e6xxx_chip *chip)
+ {
+ 	return -EOPNOTSUPP;
+-- 
+2.21.0
+

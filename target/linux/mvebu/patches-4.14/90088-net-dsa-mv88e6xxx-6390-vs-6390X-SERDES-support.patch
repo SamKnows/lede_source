@@ -1,0 +1,126 @@
+From d2e12da262c207b5abe8278248aff3d3fc5e1bb3 Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Thu, 9 Aug 2018 15:38:41 +0200
+Subject: [PATCH 088/126] net: dsa: mv88e6xxx: 6390 vs 6390X SERDES support
+
+The 6390 has two SERDES interfaces, used by ports 9 and 10.  The 6390X
+has eight SERDES interfaces. These allow ports 9 and 10 to do 10G. Or
+if lower speeds are used, some of the SERDES interfaces can be used by
+ports 2-8 for 1000Base-X.
+
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c   |  4 +--
+ drivers/net/dsa/mv88e6xxx/serdes.c | 51 +++++++++++++++++++++++++++++-
+ drivers/net/dsa/mv88e6xxx/serdes.h |  1 +
+ 3 files changed, 53 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index f83c1cb44a80..4ca6728123ff 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -3046,7 +3046,7 @@ static const struct mv88e6xxx_ops mv88e6190x_ops = {
+ 	.reset = mv88e6352_g1_reset,
+ 	.vtu_getnext = mv88e6390_g1_vtu_getnext,
+ 	.vtu_loadpurge = mv88e6390_g1_vtu_loadpurge,
+-	.serdes_power = mv88e6390_serdes_power,
++	.serdes_power = mv88e6390x_serdes_power,
+ 	.phylink_validate = mv88e6390x_phylink_validate,
+ };
+ 
+@@ -3456,7 +3456,7 @@ static const struct mv88e6xxx_ops mv88e6390x_ops = {
+ 	.reset = mv88e6352_g1_reset,
+ 	.vtu_getnext = mv88e6390_g1_vtu_getnext,
+ 	.vtu_loadpurge = mv88e6390_g1_vtu_loadpurge,
+-	.serdes_power = mv88e6390_serdes_power,
++	.serdes_power = mv88e6390x_serdes_power,
+ 	.phylink_validate = mv88e6390x_phylink_validate,
+ };
+ 
+diff --git a/drivers/net/dsa/mv88e6xxx/serdes.c b/drivers/net/dsa/mv88e6xxx/serdes.c
+index c467adb874a6..8728c14b9ab5 100644
+--- a/drivers/net/dsa/mv88e6xxx/serdes.c
++++ b/drivers/net/dsa/mv88e6xxx/serdes.c
+@@ -75,11 +75,41 @@ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
+ 	return 0;
+ }
+ 
++/* Return the SERDES lane address a port is using. Only Ports 9 and 10
++ * have SERDES lanes. Returns -ENODEV if a port does not have a lane.
++ */
++static int mv88e6390_serdes_get_lane(struct mv88e6xxx_chip *chip, int port)
++{
++	u8 cmode;
++	int err;
++
++	err = mv88e6xxx_port_get_cmode(chip, port, &cmode);
++	if (err)
++		return err;
++
++	switch (port) {
++	case 9:
++		if (cmode == MV88E6XXX_PORT_STS_CMODE_1000BASE_X ||
++		    cmode == MV88E6XXX_PORT_STS_CMODE_SGMII ||
++		    cmode == MV88E6XXX_PORT_STS_CMODE_2500BASEX)
++			return MV88E6390_PORT9_LANE0;
++		return -ENODEV;
++	case 10:
++		if (cmode == MV88E6XXX_PORT_STS_CMODE_1000BASE_X ||
++		    cmode == MV88E6XXX_PORT_STS_CMODE_SGMII ||
++		    cmode == MV88E6XXX_PORT_STS_CMODE_2500BASEX)
++			return MV88E6390_PORT10_LANE0;
++		return -ENODEV;
++	default:
++		return -ENODEV;
++	}
++}
++
+ /* Return the SERDES lane address a port is using. Ports 9 and 10 can
+  * use multiple lanes. If so, return the first lane the port uses.
+  * Returns -ENODEV if a port does not have a lane.
+  */
+-static int mv88e6390_serdes_get_lane(struct mv88e6xxx_chip *chip, int port)
++static int mv88e6390x_serdes_get_lane(struct mv88e6xxx_chip *chip, int port)
+ {
+ 	u8 cmode_port9, cmode_port10, cmode_port;
+ 	int err;
+@@ -251,6 +281,25 @@ int mv88e6390_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
+ 	if (lane < 0)
+ 		return lane;
+ 
++	switch (port) {
++	case 9 ... 10:
++		return mv88e6390_serdes_power_lane(chip, port, lane, on);
++	}
++
++	return 0;
++}
++
++int mv88e6390x_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on)
++{
++	int lane;
++
++	lane = mv88e6390x_serdes_get_lane(chip, port);
++	if (lane == -ENODEV)
++		return 0;
++
++	if (lane < 0)
++		return lane;
++
+ 	switch (port) {
+ 	case 2 ... 4:
+ 	case 5 ... 7:
+diff --git a/drivers/net/dsa/mv88e6xxx/serdes.h b/drivers/net/dsa/mv88e6xxx/serdes.h
+index 5c1cd6d8e9a5..24bbe848a434 100644
+--- a/drivers/net/dsa/mv88e6xxx/serdes.h
++++ b/drivers/net/dsa/mv88e6xxx/serdes.h
+@@ -44,5 +44,6 @@
+ 
+ int mv88e6352_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on);
+ int mv88e6390_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on);
++int mv88e6390x_serdes_power(struct mv88e6xxx_chip *chip, int port, bool on);
+ 
+ #endif
+-- 
+2.21.0
+

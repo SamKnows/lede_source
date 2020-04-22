@@ -1,0 +1,34 @@
+From 6ee5c154b5b9a6fd7f07ec087f03e14a5b6ab667 Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Thu, 9 Aug 2018 15:38:44 +0200
+Subject: [PATCH 092/126] net: dsa: mv88e6xxx: 2500Base-X uses the 1000Base-X
+ SERDES
+
+The 6390 has three different SERDES interface types. 2500Base-X is
+implemented by the SGMII/1000Base-X SERDES. So power on/off the
+correct SERDES.
+
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+---
+ drivers/net/dsa/mv88e6xxx/serdes.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/serdes.c b/drivers/net/dsa/mv88e6xxx/serdes.c
+index e8ce757c6ae0..be72f0e02951 100644
+--- a/drivers/net/dsa/mv88e6xxx/serdes.c
++++ b/drivers/net/dsa/mv88e6xxx/serdes.c
+@@ -276,10 +276,10 @@ static int mv88e6390_serdes_power_lane(struct mv88e6xxx_chip *chip, int port,
+ 	switch (cmode) {
+ 	case MV88E6XXX_PORT_STS_CMODE_SGMII:
+ 	case MV88E6XXX_PORT_STS_CMODE_1000BASE_X:
++	case MV88E6XXX_PORT_STS_CMODE_2500BASEX:
+ 		return mv88e6390_serdes_power_sgmii(chip, lane, on);
+ 	case MV88E6XXX_PORT_STS_CMODE_XAUI:
+ 	case MV88E6XXX_PORT_STS_CMODE_RXAUI:
+-	case MV88E6XXX_PORT_STS_CMODE_2500BASEX:
+ 		return mv88e6390_serdes_power_10g(chip, lane, on);
+ 	}
+ 
+-- 
+2.21.0
+

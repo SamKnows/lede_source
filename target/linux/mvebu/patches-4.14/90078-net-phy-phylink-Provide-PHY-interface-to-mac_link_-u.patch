@@ -1,0 +1,84 @@
+From 6fb63181946b5fae8b757cd2f2c363c2b7a47388 Mon Sep 17 00:00:00 2001
+From: Florian Fainelli <f.fainelli@gmail.com>
+Date: Wed, 28 Mar 2018 15:44:15 -0700
+Subject: [PATCH 078/126] net: phy: phylink: Provide PHY interface to
+ mac_link_{up, down}
+
+In preparation for having DSA transition entirely to PHYLINK, we need to pass a
+PHY interface type to the mac_link_{up,down} callbacks because we may have to
+make decisions on that (e.g: turn on/off RGMII interfaces etc.). We do not pass
+an entire phylink_link_state because not all parameters (pause, duplex etc.) are
+defined when the link is down, only link and interface are.
+
+Update mvneta accordingly since it currently implements phylink_mac_ops.
+
+Acked-by: Russell King <rmk+kernel@armlinux.org.uk>
+Signed-off-by: Florian Fainelli <f.fainelli@gmail.com>
+Acked-by: Russell King <rmk+kernel@armlinux.org.uk>
+Signed-off-by: Florian Fainelli <f.fainelli@gmail.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/ethernet/marvell/mvneta.c | 4 +++-
+ drivers/net/phy/phylink.c             | 4 +++-
+ include/linux/phylink.h               | 4 +++-
+ 3 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/marvell/mvneta.c b/drivers/net/ethernet/marvell/mvneta.c
+index 003fb1fd92f3..a837a053bdad 100644
+--- a/drivers/net/ethernet/marvell/mvneta.c
++++ b/drivers/net/ethernet/marvell/mvneta.c
+@@ -3396,7 +3396,8 @@ static void mvneta_set_eee(struct mvneta_port *pp, bool enable)
+ 	mvreg_write(pp, MVNETA_LPI_CTRL_1, lpi_ctl1);
+ }
+ 
+-static void mvneta_mac_link_down(struct net_device *ndev, unsigned int mode)
++static void mvneta_mac_link_down(struct net_device *ndev, unsigned int mode,
++				 phy_interface_t interface)
+ {
+ 	struct mvneta_port *pp = netdev_priv(ndev);
+ 	u32 val;
+@@ -3415,6 +3416,7 @@ static void mvneta_mac_link_down(struct net_device *ndev, unsigned int mode)
+ }
+ 
+ static void mvneta_mac_link_up(struct net_device *ndev, unsigned int mode,
++			       phy_interface_t interface,
+ 			       struct phy_device *phy)
+ {
+ 	struct mvneta_port *pp = netdev_priv(ndev);
+diff --git a/drivers/net/phy/phylink.c b/drivers/net/phy/phylink.c
+index 65dfdd76d7eb..0a5abf1be642 100644
+--- a/drivers/net/phy/phylink.c
++++ b/drivers/net/phy/phylink.c
+@@ -462,10 +462,12 @@ static void phylink_resolve(struct work_struct *w)
+ 	if (link_state.link != netif_carrier_ok(ndev)) {
+ 		if (!link_state.link) {
+ 			netif_carrier_off(ndev);
+-			pl->ops->mac_link_down(ndev, pl->link_an_mode);
++			pl->ops->mac_link_down(ndev, pl->link_an_mode,
++					       pl->phy_state.interface);
+ 			netdev_info(ndev, "Link is Down\n");
+ 		} else {
+ 			pl->ops->mac_link_up(ndev, pl->link_an_mode,
++					     pl->phy_state.interface,
+ 					     pl->phydev);
+ 
+ 			netif_carrier_on(ndev);
+diff --git a/include/linux/phylink.h b/include/linux/phylink.h
+index 76f054f39684..c241a0b6c29c 100644
+--- a/include/linux/phylink.h
++++ b/include/linux/phylink.h
+@@ -95,8 +95,10 @@ struct phylink_mac_ops {
+ 	 */
+ 	void (*mac_an_restart)(struct net_device *ndev);
+ 
+-	void (*mac_link_down)(struct net_device *, unsigned int mode);
++	void (*mac_link_down)(struct net_device *, unsigned int mode,
++			      phy_interface_t interface);
+ 	void (*mac_link_up)(struct net_device *, unsigned int mode,
++			    phy_interface_t interface,
+ 			    struct phy_device *);
+ };
+ 
+-- 
+2.21.0
+

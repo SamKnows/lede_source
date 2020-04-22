@@ -1,0 +1,49 @@
+From 6ac2248c03ba775796d4a4b6f5b5cf91aafc3daa Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 16 Oct 2017 14:40:23 +0200
+Subject: [PATCH 068/126] pinctrl: armada-37xx: Stop using struct
+ gpio_chip.irq_base
+
+The Armada 37xx driver always initializes the IRQ base to 0, hence the
+subtraction is a no-op. Remove the subtraction and thereby the last user
+of struct gpio_chip's .irq_base field.
+
+Note that this was also actually a bug and only worked because of the
+above assumption. If the IRQ base had been dynamically allocated, the
+subtraction would've caused the wrong mask to be generated since the
+struct irq_data.hwirq field is an index local to the IRQ domain. As a
+result, it should now be safe to also allocate this chip's IRQ base
+dynamically, unless there are consumers left that refer to the IRQs by
+their global number.
+
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Acked-by: Gregory CLEMENT <gregory.clement@free-electrons.com>
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+---
+ drivers/pinctrl/mvebu/pinctrl-armada-37xx.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/pinctrl/mvebu/pinctrl-armada-37xx.c b/drivers/pinctrl/mvebu/pinctrl-armada-37xx.c
+index 2b4261b3c0f7..639c3836259f 100644
+--- a/drivers/pinctrl/mvebu/pinctrl-armada-37xx.c
++++ b/drivers/pinctrl/mvebu/pinctrl-armada-37xx.c
+@@ -700,14 +700,14 @@ static void armada_37xx_irq_handler(struct irq_desc *desc)
+ static unsigned int armada_37xx_irq_startup(struct irq_data *d)
+ {
+ 	struct gpio_chip *chip = irq_data_get_irq_chip_data(d);
+-	int irq = d->hwirq - chip->irq_base;
++
+ 	/*
+ 	 * The mask field is a "precomputed bitmask for accessing the
+ 	 * chip registers" which was introduced for the generic
+ 	 * irqchip framework. As we don't use this framework, we can
+ 	 * reuse this field for our own usage.
+ 	 */
+-	d->mask = BIT(irq % GPIO_PER_REG);
++	d->mask = BIT(d->hwirq % GPIO_PER_REG);
+ 
+ 	armada_37xx_irq_unmask(d);
+ 
+-- 
+2.21.0
+

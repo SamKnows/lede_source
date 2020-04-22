@@ -1,0 +1,38 @@
+From 83f5636f9b2d927e9e0c4d80ea13711899b87431 Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Sun, 25 Mar 2018 23:43:14 +0200
+Subject: [PATCH 105/126] net: dsa: mv88e6xxx: Use the DT IRQ trigger mode
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+By calling request_threaded_irq() with the flag IRQF_TRIGGER_FALLING
+we override the trigger mode provided in device tree. And the
+interrupt is actually active low, which is what all the current device
+tree descriptions use.
+
+Suggested-by: Uwe Kleine-König <u.kleine-koenig@pengutronix.de>
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+Acked-by: Uwe Kleine-König <u.kleine-koenig@pengutronix.de>
+Tested-by: Uwe Kleine-König <u.kleine-koenig@pengutronix.de>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 5d9250bf4299..c947cf4fcb54 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -440,7 +440,7 @@ static int mv88e6xxx_g1_irq_setup(struct mv88e6xxx_chip *chip)
+ 
+ 	err = request_threaded_irq(chip->irq, NULL,
+ 				   mv88e6xxx_g1_irq_thread_fn,
+-				   IRQF_ONESHOT | IRQF_TRIGGER_FALLING,
++				   IRQF_ONESHOT,
+ 				   dev_name(chip->dev), chip);
+ 	if (err)
+ 		mv88e6xxx_g1_irq_free_common(chip);
+-- 
+2.21.0
+

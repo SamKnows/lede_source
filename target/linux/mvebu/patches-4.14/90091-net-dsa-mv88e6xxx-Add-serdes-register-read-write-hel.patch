@@ -1,0 +1,107 @@
+From 48e064e620263fabba4ed31509386b60073d5a7d Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Thu, 9 Aug 2018 15:38:43 +0200
+Subject: [PATCH 091/126] net: dsa: mv88e6xxx: Add serdes register read/write
+ helper
+
+Add a helper for accessing SERDES registers of the 6390 family.
+
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+---
+ drivers/net/dsa/mv88e6xxx/serdes.c | 35 +++++++++++++++++++++---------
+ drivers/net/dsa/mv88e6xxx/serdes.h |  1 -
+ 2 files changed, 25 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/serdes.c b/drivers/net/dsa/mv88e6xxx/serdes.c
+index 8886ee41c7f4..e8ce757c6ae0 100644
+--- a/drivers/net/dsa/mv88e6xxx/serdes.c
++++ b/drivers/net/dsa/mv88e6xxx/serdes.c
+@@ -35,6 +35,22 @@ static int mv88e6352_serdes_write(struct mv88e6xxx_chip *chip, int reg,
+ 					reg, val);
+ }
+ 
++static int mv88e6390_serdes_read(struct mv88e6xxx_chip *chip,
++				 int lane, int device, int reg, u16 *val)
++{
++	int reg_c45 = MII_ADDR_C45 | device << 16 | reg;
++
++	return mv88e6xxx_phy_read(chip, lane, reg_c45, val);
++}
++
++static int mv88e6390_serdes_write(struct mv88e6xxx_chip *chip,
++				  int lane, int device, int reg, u16 val)
++{
++	int reg_c45 = MII_ADDR_C45 | device << 16 | reg;
++
++	return mv88e6xxx_phy_write(chip, lane, reg_c45, val);
++}
++
+ static int mv88e6352_serdes_power_set(struct mv88e6xxx_chip *chip, bool on)
+ {
+ 	u16 val, new_val;
+@@ -199,12 +215,11 @@ static int mv88e6390_serdes_power_10g(struct mv88e6xxx_chip *chip, int lane,
+ 				      bool on)
+ {
+ 	u16 val, new_val;
+-	int reg_c45;
+ 	int err;
+ 
+-	reg_c45 = MII_ADDR_C45 | MV88E6390_SERDES_DEVICE |
+-		MV88E6390_PCS_CONTROL_1;
+-	err = mv88e6xxx_phy_read(chip, lane, reg_c45, &val);
++	err = mv88e6390_serdes_read(chip, lane, MDIO_MMD_PHYXS,
++				    MV88E6390_PCS_CONTROL_1, &val);
++
+ 	if (err)
+ 		return err;
+ 
+@@ -216,7 +231,8 @@ static int mv88e6390_serdes_power_10g(struct mv88e6xxx_chip *chip, int lane,
+ 		new_val = val | MV88E6390_PCS_CONTROL_1_PDOWN;
+ 
+ 	if (val != new_val)
+-		err = mv88e6xxx_phy_write(chip, lane, reg_c45, new_val);
++		err = mv88e6390_serdes_write(chip, lane, MDIO_MMD_PHYXS,
++					     MV88E6390_PCS_CONTROL_1, new_val);
+ 
+ 	return err;
+ }
+@@ -226,12 +242,10 @@ static int mv88e6390_serdes_power_sgmii(struct mv88e6xxx_chip *chip, int lane,
+ 					bool on)
+ {
+ 	u16 val, new_val;
+-	int reg_c45;
+ 	int err;
+ 
+-	reg_c45 = MII_ADDR_C45 | MV88E6390_SERDES_DEVICE |
+-		MV88E6390_SGMII_CONTROL;
+-	err = mv88e6xxx_phy_read(chip, lane, reg_c45, &val);
++	err = mv88e6390_serdes_read(chip, lane, MDIO_MMD_PHYXS,
++				    MV88E6390_SGMII_CONTROL, &val);
+ 	if (err)
+ 		return err;
+ 
+@@ -243,7 +257,8 @@ static int mv88e6390_serdes_power_sgmii(struct mv88e6xxx_chip *chip, int lane,
+ 		new_val = val | MV88E6390_SGMII_CONTROL_PDOWN;
+ 
+ 	if (val != new_val)
+-		err = mv88e6xxx_phy_write(chip, lane, reg_c45, new_val);
++		err = mv88e6390_serdes_write(chip, lane, MDIO_MMD_PHYXS,
++					     MV88E6390_SGMII_CONTROL, new_val);
+ 
+ 	return err;
+ }
+diff --git a/drivers/net/dsa/mv88e6xxx/serdes.h b/drivers/net/dsa/mv88e6xxx/serdes.h
+index 73781b627564..aa156d2a4004 100644
+--- a/drivers/net/dsa/mv88e6xxx/serdes.h
++++ b/drivers/net/dsa/mv88e6xxx/serdes.h
+@@ -29,7 +29,6 @@
+ #define MV88E6390_PORT10_LANE1		0x15
+ #define MV88E6390_PORT10_LANE2		0x16
+ #define MV88E6390_PORT10_LANE3		0x17
+-#define MV88E6390_SERDES_DEVICE		(4 << 16)
+ 
+ /* 10GBASE-R and 10GBASE-X4/X2 */
+ #define MV88E6390_PCS_CONTROL_1		0x1000
+-- 
+2.21.0
+

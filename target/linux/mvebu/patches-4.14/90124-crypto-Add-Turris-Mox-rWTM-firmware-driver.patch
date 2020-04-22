@@ -1,0 +1,454 @@
+From 30ed67c5a721bd7c0967a6fee472d14fb056d306 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marek=20Beh=C3=BAn?= <marek.behun@nic.cz>
+Date: Mon, 26 Nov 2018 12:23:05 +0100
+Subject: [PATCH 124/126] crypto: Add Turris Mox rWTM firmware driver
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This adds a driver to communicate with the firmware running on the
+secure processor of the Turris Mox router, enabling the kernel to
+retrieve true random numbers from the Entropy Bit Generator and to
+sign messages with the ECDSA private key burned into each Turris Mox
+device.
+
+This also adds support to read the device serial number and other
+manufacturing information.
+
+Signed-off-by: Marek Behún <marek.behun@nic.cz>
+---
+ drivers/crypto/Kconfig           |  15 ++
+ drivers/crypto/Makefile          |   1 +
+ drivers/crypto/turris-mox-rwtm.c | 382 +++++++++++++++++++++++++++++++
+ 3 files changed, 398 insertions(+)
+ create mode 100644 drivers/crypto/turris-mox-rwtm.c
+
+diff --git a/drivers/crypto/Kconfig b/drivers/crypto/Kconfig
+index 342bc777841c..c57ca4b00103 100644
+--- a/drivers/crypto/Kconfig
++++ b/drivers/crypto/Kconfig
+@@ -709,6 +709,21 @@ config CRYPTO_DEV_SAFEXCEL
+ 	  chain mode, AES cipher mode and SHA1/SHA224/SHA256/SHA512 hash
+ 	  algorithms.
+ 
++config CRYPTO_DEV_TURRIS_MOX_RWTM
++	tristate "Turris Mox rWTM secure firmware driver"
++	depends on HAS_DMA && OF
++	depends on MAILBOX
++	select HW_RANDOM
++	select CRYPTO_AKCIPHER
++	select ARMADA_37XX_RWTM_MBOX
++	help
++	  This driver communicates with the firmware on the Cortex-M3 secure
++	  processor of the Turris Mox router. Enable if you are building for
++	  Turris Mox, and you will be able to read the serial number and
++	  other manufacturing data, sign messages with the internal ECDSA-521
++	  private key and utilize the Entropy Bit Generator as hardware random
++	  number generator.
++
+ config CRYPTO_DEV_ARTPEC6
+ 	tristate "Support for Axis ARTPEC-6/7 hardware crypto acceleration."
+ 	depends on ARM && (ARCH_ARTPEC || COMPILE_TEST)
+diff --git a/drivers/crypto/Makefile b/drivers/crypto/Makefile
+index c00708d04be6..7d3dde966e2d 100644
+--- a/drivers/crypto/Makefile
++++ b/drivers/crypto/Makefile
+@@ -40,6 +40,7 @@ obj-$(CONFIG_CRYPTO_DEV_SAHARA) += sahara.o
+ obj-$(CONFIG_ARCH_STM32) += stm32/
+ obj-$(CONFIG_CRYPTO_DEV_SUN4I_SS) += sunxi-ss/
+ obj-$(CONFIG_CRYPTO_DEV_TALITOS) += talitos.o
++obj-$(CONFIG_CRYPTO_DEV_TURRIS_MOX_RWTM) += turris-mox-rwtm.o
+ obj-$(CONFIG_CRYPTO_DEV_UX500) += ux500/
+ obj-$(CONFIG_CRYPTO_DEV_VIRTIO) += virtio/
+ obj-$(CONFIG_CRYPTO_DEV_VMX) += vmx/
+diff --git a/drivers/crypto/turris-mox-rwtm.c b/drivers/crypto/turris-mox-rwtm.c
+new file mode 100644
+index 000000000000..212337293b38
+--- /dev/null
++++ b/drivers/crypto/turris-mox-rwtm.c
+@@ -0,0 +1,382 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Turris Mox rWTM firmware driver
++ *
++ * Author: Marek Behun <marek.behun@nic.cz>
++ */
++
++#include <linux/armada-37xx-rwtm-mailbox.h>
++#include <linux/completion.h>
++#include <linux/dma-mapping.h>
++#include <linux/hw_random.h>
++#include <linux/mailbox_client.h>
++#include <linux/module.h>
++#include <linux/mutex.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++
++#define DRIVER_NAME		"turris-mox-rwtm"
++
++#define MBOX_STS_SUCCESS	(0 << 30)
++#define MBOX_STS_FAIL		(1 << 30)
++#define MBOX_STS_BADCMD		(2 << 30)
++#define MBOX_STS_ERROR(s)	((s) & (3 << 30))
++#define MBOX_STS_VALUE(s)	(((s) >> 10) & 0xfffff)
++#define MBOX_STS_CMD(s)		((s) & 0x3ff)
++
++enum mbox_cmd {
++	MBOX_CMD_GET_RANDOM	= 1,
++	MBOX_CMD_BOARD_INFO,
++	MBOX_CMD_ECDSA_PUB_KEY,
++	MBOX_CMD_HASH,
++	MBOX_CMD_SIGN,
++	MBOX_CMD_VERIFY,
++
++	MBOX_CMD_OTP_READ,
++	MBOX_CMD_OTP_WRITE
++};
++
++struct mox_rwtm {
++	struct device *dev;
++	void *buf;
++	dma_addr_t buf_phys;
++	struct mbox_client mbox_client;
++	struct mbox_chan *mbox;
++	struct mutex busy;
++	struct completion cmd_done;
++	struct armada_37xx_rwtm_rx_msg reply;
++	struct hwrng hwrng;
++
++	/* board information */
++	u64 serial_number;
++	int board_version, ram_size;
++	u8 mac_address1[6], mac_address2[6];
++	u8 pubkey[135];
++	u8 last_sig[136];
++	int last_sig_done;
++};
++
++#define MOX_ATTR(name, format)						\
++static ssize_t								\
++mox_##name##_show(struct device *dev, struct device_attribute *a,	\
++		  char *buf)						\
++{									\
++	struct mox_rwtm *rwtm = dev_get_drvdata(dev);			\
++	return sprintf(buf, format, rwtm->name);			\
++}									\
++static DEVICE_ATTR_RO(mox_##name);
++
++MOX_ATTR(serial_number, "%016llX\n");
++MOX_ATTR(board_version, "%i\n");
++MOX_ATTR(ram_size, "%i\n");
++MOX_ATTR(mac_address1, "%pM\n");
++MOX_ATTR(mac_address2, "%pM\n");
++MOX_ATTR(pubkey, "%s\n");
++
++static ssize_t
++mox_do_sign_show(struct device *dev, struct device_attribute *a, char *buf)
++{
++	struct mox_rwtm *rwtm = dev_get_drvdata(dev);
++
++	if (!rwtm->last_sig_done)
++		return -ENODATA;
++
++	rwtm->last_sig_done = 0;
++	memcpy(buf, rwtm->last_sig, 136);
++	return 136;
++}
++
++static void be32_to_cpu_array(u32 *buf, int n)
++{
++	for (; n > 0; --n, ++buf)
++		*buf = be32_to_cpu(*buf);
++}
++
++static void cpu_to_be32_array(u32 *buf, int n)
++{
++	for (; n > 0; --n, ++buf)
++		*buf = cpu_to_be32(*buf);
++}
++
++static ssize_t
++mox_do_sign_store(struct device *dev, struct device_attribute *a,
++		  const char *buf, size_t count)
++{
++	struct mox_rwtm *rwtm = dev_get_drvdata(dev);
++	struct armada_37xx_rwtm_rx_msg *reply = &rwtm->reply;
++	struct armada_37xx_rwtm_tx_msg msg;
++	int ret;
++
++	if (count != 64)
++		return -EINVAL;
++
++	if (rwtm->last_sig_done)
++		return -EBUSY;
++
++	if (!mutex_trylock(&rwtm->busy))
++		return -EBUSY;
++
++	memset(rwtm->buf, 0, 4);
++	memcpy(rwtm->buf + 4, buf, 64);
++	be32_to_cpu_array(rwtm->buf, 17);
++
++	msg.command = MBOX_CMD_SIGN;
++	msg.args[0] = 1;
++	msg.args[1] = rwtm->buf_phys;
++	msg.args[2] = rwtm->buf_phys + 68;
++	msg.args[3] = rwtm->buf_phys + 2 * 68;
++	ret = mbox_send_message(rwtm->mbox, &msg);
++	if (ret < 0)
++		goto unlock_mutex;
++
++	ret = wait_for_completion_interruptible(&rwtm->cmd_done);
++	if (ret < 0)
++		goto unlock_mutex;
++
++	ret = MBOX_STS_VALUE(reply->retval);
++	if (MBOX_STS_ERROR(reply->retval) != MBOX_STS_SUCCESS)
++		goto unlock_mutex;
++
++	memcpy(rwtm->last_sig, rwtm->buf + 68, 136);
++	cpu_to_be32_array((u32 *) rwtm->last_sig, 34);
++	rwtm->last_sig_done = 1;
++
++	mutex_unlock(&rwtm->busy);
++	return count;
++unlock_mutex:
++	mutex_unlock(&rwtm->busy);
++	return ret;
++}
++
++static DEVICE_ATTR_RW(mox_do_sign);
++
++static struct attribute *mox_rwtm_attrs[] = {
++	&dev_attr_mox_serial_number.attr,
++	&dev_attr_mox_board_version.attr,
++	&dev_attr_mox_ram_size.attr,
++	&dev_attr_mox_mac_address1.attr,
++	&dev_attr_mox_mac_address2.attr,
++	&dev_attr_mox_pubkey.attr,
++	&dev_attr_mox_do_sign.attr,
++	NULL
++};
++ATTRIBUTE_GROUPS(mox_rwtm);
++
++static void mox_rwtm_rx_callback(struct mbox_client *cl, void *data)
++{
++	struct mox_rwtm *rwtm = dev_get_drvdata(cl->dev);
++	struct armada_37xx_rwtm_rx_msg *msg = data;
++
++	rwtm->reply = *msg;
++	complete(&rwtm->cmd_done);
++}
++
++static int mox_get_status(enum mbox_cmd cmd, u32 retval)
++{
++	if (MBOX_STS_CMD(retval) != cmd ||
++	    MBOX_STS_ERROR(retval) != MBOX_STS_SUCCESS)
++		return -EIO;
++	else if (MBOX_STS_ERROR(retval) == MBOX_STS_FAIL)
++		return -(int)MBOX_STS_VALUE(retval);
++	else
++		return MBOX_STS_VALUE(retval);
++}
++
++static void reply_to_mac(u8 *mac, u32 t1, u32 t2)
++{
++	mac[0] = t1 >> 8;
++	mac[1] = t1;
++	mac[2] = t2 >> 24;
++	mac[3] = t2 >> 16;
++	mac[4] = t2 >> 8;
++	mac[5] = t2;
++}
++
++static int mox_board_info(struct mox_rwtm *rwtm)
++{
++	struct armada_37xx_rwtm_tx_msg msg;
++	struct armada_37xx_rwtm_rx_msg *reply = &rwtm->reply;
++	int ret;
++
++	msg.command = MBOX_CMD_BOARD_INFO;
++	ret = mbox_send_message(rwtm->mbox, &msg);
++	if (ret < 0)
++		return ret;
++
++	ret = wait_for_completion_timeout(&rwtm->cmd_done, HZ / 2);
++	if (ret < 0)
++		return ret;
++
++	ret = mox_get_status(MBOX_CMD_BOARD_INFO, reply->retval);
++	if (ret < 0)
++		return ret;
++
++	rwtm->serial_number = reply->status[1];
++	rwtm->serial_number <<= 32;
++	rwtm->serial_number |= reply->status[0];
++	rwtm->board_version = reply->status[2];
++	rwtm->ram_size = reply->status[3];
++	reply_to_mac(rwtm->mac_address1, reply->status[4], reply->status[5]);
++	reply_to_mac(rwtm->mac_address2, reply->status[6], reply->status[7]);
++
++	pr_info("Turris Mox serial number %016llX\n", rwtm->serial_number);
++	pr_info("           board version %i\n", rwtm->board_version);
++	pr_info("           burned RAM size %i MiB\n", rwtm->ram_size);
++
++	msg.command = MBOX_CMD_ECDSA_PUB_KEY;
++	ret = mbox_send_message(rwtm->mbox, &msg);
++	if (ret < 0)
++		return ret;
++
++	ret = wait_for_completion_timeout(&rwtm->cmd_done, HZ / 2);
++	if (ret < 0)
++		return ret;
++
++	ret = mox_get_status(MBOX_CMD_ECDSA_PUB_KEY, reply->retval);
++	if (ret < 0 && ret != -ENODATA) {
++		return ret;
++	} else if (ret == -ENODATA) {
++		strcpy(rwtm->pubkey, "none");
++	} else {
++		u32 *s = reply->status;
++		sprintf(rwtm->pubkey,
++			"%06x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x",
++			ret, s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7],
++			s[8], s[9], s[10], s[11], s[12], s[13], s[14], s[15]);
++	}
++
++	return 0;
++}
++
++static int mox_hwrng_read(struct hwrng *rng, void *data, size_t max, bool wait)
++{
++	struct mox_rwtm *rwtm = (struct mox_rwtm *) rng->priv;
++	struct armada_37xx_rwtm_tx_msg msg;
++	int ret;
++
++	if (max > 4096)
++		max = 4096;
++
++	msg.command = MBOX_CMD_GET_RANDOM;
++	msg.args[0] = 1;
++	msg.args[1] = rwtm->buf_phys;
++	msg.args[2] = (max + 3) & ~3;
++
++	if (!wait) {
++		if (!mutex_trylock(&rwtm->busy))
++			return -EBUSY;
++	} else {
++		mutex_lock(&rwtm->busy);
++	}
++
++	ret = mbox_send_message(rwtm->mbox, &msg);
++	if (ret < 0)
++		goto unlock_mutex;
++
++	ret = wait_for_completion_interruptible(&rwtm->cmd_done);
++	if (ret < 0)
++		goto unlock_mutex;
++
++	ret = mox_get_status(MBOX_CMD_GET_RANDOM, rwtm->reply.retval);
++	if (ret < 0)
++		goto unlock_mutex;
++
++	memcpy(data, rwtm->buf, max);
++	ret = max;
++
++unlock_mutex:
++	mutex_unlock(&rwtm->busy);
++	return ret;
++}
++
++static int turris_mox_rwtm_probe(struct platform_device *pdev)
++{
++	struct mox_rwtm *rwtm;
++	struct device *dev = &pdev->dev;
++	int ret;
++
++	rwtm = devm_kzalloc(dev, sizeof(*rwtm), GFP_KERNEL);
++	if (!rwtm)
++		return -ENOMEM;
++
++	rwtm->dev = dev;
++	rwtm->buf = dmam_alloc_coherent(dev, PAGE_SIZE, &rwtm->buf_phys,
++					GFP_KERNEL);
++	if (!rwtm->buf)
++		return -ENOMEM;
++
++	ret = devm_device_add_groups(dev, mox_rwtm_groups);
++	if (ret < 0)
++		return ret;
++
++	platform_set_drvdata(pdev, rwtm);
++
++	mutex_init(&rwtm->busy);
++
++	rwtm->mbox_client.dev = dev;
++	rwtm->mbox_client.rx_callback = mox_rwtm_rx_callback;
++
++	rwtm->mbox = mbox_request_channel(&rwtm->mbox_client, 0);
++	if (IS_ERR(rwtm->mbox)) {
++		ret = PTR_ERR(rwtm->mbox);
++		if (ret != -EPROBE_DEFER)
++			dev_err(dev, "Cannot request mailbox channel: %i\n",
++				ret);
++		return ret;
++	}
++
++	init_completion(&rwtm->cmd_done);
++
++	ret = mox_board_info(rwtm);
++	if (ret < 0) {
++		dev_err(dev, "Cannot read board information!\n");
++		goto free_channel;
++	}
++
++	rwtm->hwrng.name = DRIVER_NAME "_hwrng";
++	rwtm->hwrng.read = mox_hwrng_read;
++	rwtm->hwrng.priv = (unsigned long) rwtm;
++	rwtm->hwrng.quality = 1024;
++
++	ret = devm_hwrng_register(dev, &rwtm->hwrng);
++	if (ret < 0) {
++		dev_err(dev, "Cannot register HWRNG: %i\n", ret);
++		goto free_channel;
++	}
++
++	return 0;
++
++free_channel:
++	mbox_free_channel(rwtm->mbox);
++	return ret;
++}
++
++static int turris_mox_rwtm_remove(struct platform_device *pdev)
++{
++	struct mox_rwtm *rwtm = platform_get_drvdata(pdev);
++
++	mbox_free_channel(rwtm->mbox);
++
++	return 0;
++}
++
++static const struct of_device_id turris_mox_rwtm_match[] = {
++	{ .compatible = "cznic,turris-mox-rwtm", },
++	{ },
++};
++
++MODULE_DEVICE_TABLE(of, turris_mox_rwtm_match);
++
++static struct platform_driver turris_mox_rwtm_driver = {
++	.probe	= turris_mox_rwtm_probe,
++	.remove	= turris_mox_rwtm_remove,
++	.driver	= {
++		.name		= DRIVER_NAME,
++		.of_match_table	= turris_mox_rwtm_match,
++	},
++};
++module_platform_driver(turris_mox_rwtm_driver);
++
++MODULE_LICENSE("GPL v2");
++MODULE_DESCRIPTION("Turris Mox rWTM firmware driver");
++MODULE_AUTHOR("Marek Behun <marek.behun@nic.cz>");
+-- 
+2.21.0
+

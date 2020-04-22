@@ -1,0 +1,30 @@
+From 2de4d6fa6b53359ff3305523c86f74e097ff6c2b Mon Sep 17 00:00:00 2001
+From: Russell King <rmk+kernel@armlinux.org.uk>
+Date: Fri, 1 Dec 2017 10:24:58 +0000
+Subject: [PATCH 073/126] sfp: fix sparse warning
+
+drivers/net/phy/sfp-bus.c:298:13: warning: context imbalance in 'sfp_bus_release' - wrong count at exit
+
+Signed-off-by: Russell King <rmk+kernel@armlinux.org.uk>
+Reviewed-by: Florian Fainelli <f.fainelli@gmail.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/phy/sfp-bus.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/phy/sfp-bus.c b/drivers/net/phy/sfp-bus.c
+index ffeeeae8e36a..961ef6f5f93d 100644
+--- a/drivers/net/phy/sfp-bus.c
++++ b/drivers/net/phy/sfp-bus.c
+@@ -246,7 +246,7 @@ static struct sfp_bus *sfp_bus_get(struct device_node *np)
+ 	return found;
+ }
+ 
+-static void sfp_bus_release(struct kref *kref) __releases(sfp_mutex)
++static void sfp_bus_release(struct kref *kref)
+ {
+ 	struct sfp_bus *bus = container_of(kref, struct sfp_bus, kref);
+ 
+-- 
+2.21.0
+

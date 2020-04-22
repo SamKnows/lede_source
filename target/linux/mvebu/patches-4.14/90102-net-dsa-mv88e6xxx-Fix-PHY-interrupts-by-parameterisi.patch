@@ -1,0 +1,263 @@
+From d918fd360d2907e81bd096f4ec3c357c6509ed60 Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Sat, 5 May 2018 20:58:22 +0200
+Subject: [PATCH 102/126] net: dsa: mv88e6xxx: Fix PHY interrupts by
+ parameterising PHY base address
+
+Most of the mv88e6xxx switches have the PHYs at address 0, 1, 2, ...
+The 6341 however has the PHYs at 0x10, 0x11, 0x12. Add a parameter to
+the info structure for this base address.
+
+Testing of 6f88284f3bd7 ("net: dsa: mv88e6xxx: Add MDIO interrupts for
+internal PHYs") was performed on the 6341. So it works only on the
+6341. Use this base information to correctly set the interrupt.
+
+Fixes: 6f88284f3bd7 ("net: dsa: mv88e6xxx: Add MDIO interrupts for internal PHYs")
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c    | 26 ++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/chip.h    |  1 +
+ drivers/net/dsa/mv88e6xxx/global2.c |  2 +-
+ 3 files changed, 28 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 9f60e8fa8783..93f2697efc65 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -3605,6 +3605,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3626,6 +3627,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 0,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3645,6 +3647,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 8,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3666,6 +3669,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3687,6 +3691,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 0,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3706,6 +3711,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x10,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 3750,
+@@ -3727,6 +3733,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3748,6 +3755,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 0,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3769,6 +3777,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3790,6 +3799,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3811,6 +3821,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3832,6 +3843,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3853,6 +3865,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 0,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3872,6 +3885,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 11,
+ 		.max_vid = 8191,
+ 		.port_base_addr = 0x0,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.tag_protocol = DSA_TAG_PROTO_DSA,
+@@ -3893,6 +3907,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 11,
+ 		.max_vid = 8191,
+ 		.port_base_addr = 0x0,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 3750,
+@@ -3914,6 +3929,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 11,
+ 		.max_vid = 8191,
+ 		.port_base_addr = 0x0,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 3750,
+@@ -3935,6 +3951,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3956,6 +3973,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 11,
+ 		.max_vid = 8191,
+ 		.port_base_addr = 0x0,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 3750,
+@@ -3977,6 +3995,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -3998,6 +4017,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -4018,6 +4038,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x10,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 3750,
+@@ -4039,6 +4060,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -4060,6 +4082,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -4081,6 +4104,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 5,
+ 		.max_vid = 4095,
+ 		.port_base_addr = 0x10,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 15000,
+@@ -4101,6 +4125,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 11,
+ 		.max_vid = 8191,
+ 		.port_base_addr = 0x0,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 3750,
+@@ -4121,6 +4146,7 @@ static const struct mv88e6xxx_info mv88e6xxx_table[] = {
+ 		.num_internal_phys = 11,
+ 		.max_vid = 8191,
+ 		.port_base_addr = 0x0,
++		.phy_base_addr = 0x0,
+ 		.global1_addr = 0x1b,
+ 		.global2_addr = 0x1c,
+ 		.age_time_coeff = 3750,
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
+index c3ea525a3b19..e76b9cd07578 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.h
++++ b/drivers/net/dsa/mv88e6xxx/chip.h
+@@ -109,6 +109,7 @@ struct mv88e6xxx_info {
+ 	unsigned int num_internal_phys;
+ 	unsigned int max_vid;
+ 	unsigned int port_base_addr;
++	unsigned int phy_base_addr;
+ 	unsigned int global1_addr;
+ 	unsigned int global2_addr;
+ 	unsigned int age_time_coeff;
+diff --git a/drivers/net/dsa/mv88e6xxx/global2.c b/drivers/net/dsa/mv88e6xxx/global2.c
+index 84dbcfb07f4f..f133690e8b92 100644
+--- a/drivers/net/dsa/mv88e6xxx/global2.c
++++ b/drivers/net/dsa/mv88e6xxx/global2.c
+@@ -1117,7 +1117,7 @@ int mv88e6xxx_g2_irq_mdio_setup(struct mv88e6xxx_chip *chip,
+ 			err = irq;
+ 			goto out;
+ 		}
+-		bus->irq[chip->info->port_base_addr + phy] = irq;
++		bus->irq[chip->info->phy_base_addr + phy] = irq;
+ 	}
+ 	return 0;
+ out:
+-- 
+2.21.0
+

@@ -1,0 +1,65 @@
+From 71316864d24bcb8f64201af42bc7b577b9f624df Mon Sep 17 00:00:00 2001
+From: Russell King <rmk+kernel@arm.linux.org.uk>
+Date: Tue, 2 Jan 2018 17:24:54 +0000
+Subject: [PATCH 060/126] net: mvneta: add 1000BaseX support
+
+Add support for 1000BaseX link modes.
+
+Signed-off-by: Russell King <rmk+kernel@arm.linux.org.uk>
+---
+ drivers/net/ethernet/marvell/mvneta.c | 18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/marvell/mvneta.c b/drivers/net/ethernet/marvell/mvneta.c
+index cbd81bdf745e..003fb1fd92f3 100644
+--- a/drivers/net/ethernet/marvell/mvneta.c
++++ b/drivers/net/ethernet/marvell/mvneta.c
+@@ -3212,6 +3212,16 @@ static void mvneta_validate(struct net_device *ndev, unsigned long *supported,
+ {
+ 	__ETHTOOL_DECLARE_LINK_MODE_MASK(mask) = { 0, };
+ 
++	/* We only support QSGMII, SGMII, 802.3z and RGMII modes */
++	if (state->interface != PHY_INTERFACE_MODE_NA &&
++	    state->interface != PHY_INTERFACE_MODE_QSGMII &&
++	    state->interface != PHY_INTERFACE_MODE_SGMII &&
++	    !phy_interface_mode_is_8023z(state->interface) &&
++	    !phy_interface_mode_is_rgmii(state->interface)) {
++		bitmap_zero(supported, __ETHTOOL_LINK_MODE_MASK_NBITS);
++		return;
++	}
++
+ 	/* Allow all the expected bits */
+ 	phylink_set(mask, Autoneg);
+ 	phylink_set_port_modes(mask);
+@@ -3222,7 +3232,7 @@ static void mvneta_validate(struct net_device *ndev, unsigned long *supported,
+ 	phylink_set(mask, 1000baseT_Full);
+ 	phylink_set(mask, 1000baseX_Full);
+ 
+-	if (state->interface != PHY_INTERFACE_MODE_1000BASEX) {
++	if (!phy_interface_mode_is_8023z(state->interface)) {
+ 		/* 10M and 100M are only supported in non-802.3z mode */
+ 		phylink_set(mask, 10baseT_Half);
+ 		phylink_set(mask, 10baseT_Full);
+@@ -3310,7 +3320,8 @@ static void mvneta_mac_config(struct net_device *ndev, unsigned int mode,
+ 	new_ctrl2 |= MVNETA_GMAC2_PORT_RGMII;
+ 
+ 	if (state->interface == PHY_INTERFACE_MODE_QSGMII ||
+-	    state->interface == PHY_INTERFACE_MODE_SGMII)
++	    state->interface == PHY_INTERFACE_MODE_SGMII ||
++	    phy_interface_mode_is_8023z(state->interface))
+ 		new_ctrl2 |= MVNETA_GMAC2_PCS_ENABLE;
+ 
+ 	if (!phylink_autoneg_inband(mode)) {
+@@ -4251,7 +4262,8 @@ static int mvneta_port_power_up(struct mvneta_port *pp, int phy_mode)
+ 
+ 	if (phy_mode == PHY_INTERFACE_MODE_QSGMII)
+ 		mvreg_write(pp, MVNETA_SERDES_CFG, MVNETA_QSGMII_SERDES_PROTO);
+-	else if (phy_mode == PHY_INTERFACE_MODE_SGMII)
++	else if (phy_mode == PHY_INTERFACE_MODE_SGMII ||
++		 phy_mode == PHY_INTERFACE_MODE_1000BASEX)
+ 		mvreg_write(pp, MVNETA_SERDES_CFG, MVNETA_SGMII_SERDES_PROTO);
+ 	else if (!phy_interface_mode_is_rgmii(phy_mode))
+ 		return -EINVAL;
+-- 
+2.21.0
+

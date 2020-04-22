@@ -1,0 +1,44 @@
+From cd2c543d7c18dbd47844558330fc68f3cd280b36 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marek=20Beh=C3=BAn?= <marek.behun@nic.cz>
+Date: Sun, 2 Sep 2018 21:54:41 +0200
+Subject: [PATCH 120/126] arm64: dts: marvell: armada-37xx: add nodes to
+ support watchdog
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This adds the system controller node for CPU Miscellaneous Registers
+(which is needed for the watchdog node) and the watchdog node.
+
+Signed-off-by: Marek Behún <marek.behun@nic.cz>
+---
+ arch/arm64/boot/dts/marvell/armada-37xx.dtsi | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/marvell/armada-37xx.dtsi b/arch/arm64/boot/dts/marvell/armada-37xx.dtsi
+index 783fbb7f3b47..70378339ab5b 100644
+--- a/arch/arm64/boot/dts/marvell/armada-37xx.dtsi
++++ b/arch/arm64/boot/dts/marvell/armada-37xx.dtsi
+@@ -101,6 +101,19 @@
+ 			/* 32M internal register @ 0xd000_0000 */
+ 			ranges = <0x0 0x0 0xd0000000 0x2000000>;
+ 
++			wdt: watchdog@8300 {
++				compatible = "marvell,armada-3700-wdt";
++				reg = <0x8300 0x40>;
++				marvell,system-controller = <&cpu_misc>;
++				clocks = <&xtalclk>;
++			};
++
++			cpu_misc: system-controller@d000 {
++				compatible = "marvell,armada-3700-cpu-misc",
++					     "syscon";
++				reg = <0xd000 0x1000>;
++			};
++
+ 			spi0: spi@10600 {
+ 				compatible = "marvell,armada-3700-spi";
+ 				#address-cells = <1>;
+-- 
+2.21.0
+

@@ -1,0 +1,107 @@
+From cb0da3adfe03f7275dbbf4574b46137cb8a23f66 Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Fri, 13 Jul 2018 18:18:35 +0200
+Subject: [PATCH 111/126] net: ethernet: mvneta: Fix napi structure mixup on
+ armada 3700
+
+The mvneta Ethernet driver is used on a few different Marvell SoCs.
+Some SoCs have per cpu interrupts for Ethernet events. Some SoCs have
+a single interrupt, independent of the CPU. The driver handles this by
+having a per CPU napi structure when there are per CPU interrupts, and
+a global napi structure when there is a single interrupt.
+
+When the napi core calls mvneta_poll(), it passes the napi
+instance. This was not being propagated through the call chain, and
+instead the per-cpu napi instance was passed to napi_gro_receive()
+call. This breaks when there is a single global napi instance.
+
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+Fixes: 2636ac3cc2b4 ("net: mvneta: Add network support for Armada 3700 SoC")
+Signed-off-by: Gregory CLEMENT <gregory.clement@bootlin.com>
+---
+ drivers/net/ethernet/marvell/mvneta.c | 22 ++++++++++++----------
+ 1 file changed, 12 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/net/ethernet/marvell/mvneta.c b/drivers/net/ethernet/marvell/mvneta.c
+index 2986f8f1ae4a..8f9a2f05077e 100644
+--- a/drivers/net/ethernet/marvell/mvneta.c
++++ b/drivers/net/ethernet/marvell/mvneta.c
+@@ -1905,10 +1905,10 @@ static void mvneta_rxq_drop_pkts(struct mvneta_port *pp,
+ }
+ 
+ /* Main rx processing when using software buffer management */
+-static int mvneta_rx_swbm(struct mvneta_port *pp, int rx_todo,
++static int mvneta_rx_swbm(struct napi_struct *napi,
++			  struct mvneta_port *pp, int rx_todo,
+ 			  struct mvneta_rx_queue *rxq)
+ {
+-	struct mvneta_pcpu_port *port = this_cpu_ptr(pp->ports);
+ 	struct net_device *dev = pp->dev;
+ 	int rx_done;
+ 	u32 rcvd_pkts = 0;
+@@ -1963,7 +1963,7 @@ static int mvneta_rx_swbm(struct mvneta_port *pp, int rx_todo,
+ 
+ 			skb->protocol = eth_type_trans(skb, dev);
+ 			mvneta_rx_csum(pp, rx_status, skb);
+-			napi_gro_receive(&port->napi, skb);
++			napi_gro_receive(napi, skb);
+ 
+ 			rcvd_pkts++;
+ 			rcvd_bytes += rx_bytes;
+@@ -2005,7 +2005,7 @@ static int mvneta_rx_swbm(struct mvneta_port *pp, int rx_todo,
+ 
+ 		mvneta_rx_csum(pp, rx_status, skb);
+ 
+-		napi_gro_receive(&port->napi, skb);
++		napi_gro_receive(napi, skb);
+ 	}
+ 
+ 	if (rcvd_pkts) {
+@@ -2024,10 +2024,10 @@ static int mvneta_rx_swbm(struct mvneta_port *pp, int rx_todo,
+ }
+ 
+ /* Main rx processing when using hardware buffer management */
+-static int mvneta_rx_hwbm(struct mvneta_port *pp, int rx_todo,
++static int mvneta_rx_hwbm(struct napi_struct *napi,
++			  struct mvneta_port *pp, int rx_todo,
+ 			  struct mvneta_rx_queue *rxq)
+ {
+-	struct mvneta_pcpu_port *port = this_cpu_ptr(pp->ports);
+ 	struct net_device *dev = pp->dev;
+ 	int rx_done;
+ 	u32 rcvd_pkts = 0;
+@@ -2089,7 +2089,7 @@ static int mvneta_rx_hwbm(struct mvneta_port *pp, int rx_todo,
+ 
+ 			skb->protocol = eth_type_trans(skb, dev);
+ 			mvneta_rx_csum(pp, rx_status, skb);
+-			napi_gro_receive(&port->napi, skb);
++			napi_gro_receive(napi, skb);
+ 
+ 			rcvd_pkts++;
+ 			rcvd_bytes += rx_bytes;
+@@ -2133,7 +2133,7 @@ static int mvneta_rx_hwbm(struct mvneta_port *pp, int rx_todo,
+ 
+ 		mvneta_rx_csum(pp, rx_status, skb);
+ 
+-		napi_gro_receive(&port->napi, skb);
++		napi_gro_receive(napi, skb);
+ 	}
+ 
+ 	if (rcvd_pkts) {
+@@ -2726,9 +2726,11 @@ static int mvneta_poll(struct napi_struct *napi, int budget)
+ 	if (rx_queue) {
+ 		rx_queue = rx_queue - 1;
+ 		if (pp->bm_priv)
+-			rx_done = mvneta_rx_hwbm(pp, budget, &pp->rxqs[rx_queue]);
++			rx_done = mvneta_rx_hwbm(napi, pp, budget,
++						 &pp->rxqs[rx_queue]);
+ 		else
+-			rx_done = mvneta_rx_swbm(pp, budget, &pp->rxqs[rx_queue]);
++			rx_done = mvneta_rx_swbm(napi, pp, budget,
++						 &pp->rxqs[rx_queue]);
+ 	}
+ 
+ 	if (rx_done < budget) {
+-- 
+2.21.0
+

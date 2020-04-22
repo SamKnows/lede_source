@@ -1,0 +1,51 @@
+From 13efe77a5072c17be1a2948f1900c86a8fc7ef37 Mon Sep 17 00:00:00 2001
+From: Maxime Chevallier <maxime.chevallier@smile.fr>
+Date: Wed, 17 Jan 2018 17:15:27 +0100
+Subject: [PATCH 063/126] spi: a3700: Allow to enable or disable FIFO mode
+
+The armada 3700 SPI controller allows to make transfers without using
+the 32 bytes RFIFO and WFIFO.
+
+This commit enable switching between FIFO and non-FIFO mode, which is
+necessary to implement full-duplex transfers.
+
+Signed-off-by: Maxime Chevallier <maxime.chevallier@smile.fr>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/spi/spi-armada-3700.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/spi/spi-armada-3700.c b/drivers/spi/spi-armada-3700.c
+index 8048468277f3..b38730928186 100644
+--- a/drivers/spi/spi-armada-3700.c
++++ b/drivers/spi/spi-armada-3700.c
+@@ -186,12 +186,15 @@ static int a3700_spi_pin_mode_set(struct a3700_spi *a3700_spi,
+ 	return 0;
+ }
+ 
+-static void a3700_spi_fifo_mode_set(struct a3700_spi *a3700_spi)
++static void a3700_spi_fifo_mode_set(struct a3700_spi *a3700_spi, bool enable)
+ {
+ 	u32 val;
+ 
+ 	val = spireg_read(a3700_spi, A3700_SPI_IF_CFG_REG);
+-	val |= A3700_SPI_FIFO_MODE;
++	if (enable)
++		val |= A3700_SPI_FIFO_MODE;
++	else
++		val &= ~A3700_SPI_FIFO_MODE;
+ 	spireg_write(a3700_spi, A3700_SPI_IF_CFG_REG, val);
+ }
+ 
+@@ -299,7 +302,7 @@ static int a3700_spi_init(struct a3700_spi *a3700_spi)
+ 		a3700_spi_deactivate_cs(a3700_spi, i);
+ 
+ 	/* Enable FIFO mode */
+-	a3700_spi_fifo_mode_set(a3700_spi);
++	a3700_spi_fifo_mode_set(a3700_spi, true);
+ 
+ 	/* Set SPI mode */
+ 	a3700_spi_mode_set(a3700_spi, master->mode_bits);
+-- 
+2.21.0
+

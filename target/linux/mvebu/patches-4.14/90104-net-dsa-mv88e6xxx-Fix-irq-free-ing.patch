@@ -1,0 +1,31 @@
+From 449552974d9f46837db2eb70e9314efe7eea683c Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Thu, 8 Mar 2018 21:21:36 +0100
+Subject: [PATCH 104/126] net: dsa: mv88e6xxx: Fix irq free'ing
+
+Call the common irq free function, rather than going recursive and
+blowing away the stack, followed by the machine.
+
+Fixes: 294d711ee8c0 ("net: dsa: mv88e6xxx: Poll when no interrupt defined")
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 93f2697efc65..5d9250bf4299 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -375,7 +375,7 @@ static void mv88e6xxx_g1_irq_free_common(struct mv88e6xxx_chip *chip)
+ 
+ static void mv88e6xxx_g1_irq_free(struct mv88e6xxx_chip *chip)
+ {
+-	mv88e6xxx_g1_irq_free(chip);
++	mv88e6xxx_g1_irq_free_common(chip);
+ 
+ 	free_irq(chip->irq, chip);
+ }
+-- 
+2.21.0
+

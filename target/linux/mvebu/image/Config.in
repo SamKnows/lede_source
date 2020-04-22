@@ -1,0 +1,22 @@
+if TARGET_mvebu
+
+config TURRIS_MOX_KERNEL
+	bool
+	prompt "Turris MOX kernel extensions"
+	default y if TARGET_mvebu_cortexa53_DEVICE_cznic-mox
+	default n
+	select KERNEL_MFD_MOXTET
+	select KERNEL_GPIO_MOXTET
+	select KERNEL_CRYPTO_DEV_TURRIS_MOX_RWTM
+
+config KERNEL_MFD_MOXTET
+	bool
+	default n
+config KERNEL_GPIO_MOXTET
+	bool
+	default n
+config KERNEL_CRYPTO_DEV_TURRIS_MOX_RWTM
+	bool
+	default n
+
+endif

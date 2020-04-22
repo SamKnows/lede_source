@@ -1,0 +1,74 @@
+From 77e5f1e1abb7deac33a6edd8018e0c97531ae8bf Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Thu, 14 Dec 2017 15:26:50 +0100
+Subject: [PATCH 009/126] crypto: inside-secure - remove unused parameter in
+ invalidate_cache
+
+The SafeXcel context isn't used in the cache invalidation function. This
+cosmetic patch removes it (as well as from the function prototype in the
+header file and when the function is called).
+
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+[Antoine: commit message]
+Signed-off-by: Antoine Tenart <antoine.tenart@free-electrons.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/inside-secure/safexcel.c        | 1 -
+ drivers/crypto/inside-secure/safexcel.h        | 1 -
+ drivers/crypto/inside-secure/safexcel_cipher.c | 2 +-
+ drivers/crypto/inside-secure/safexcel_hash.c   | 2 +-
+ 4 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/crypto/inside-secure/safexcel.c b/drivers/crypto/inside-secure/safexcel.c
+index 3ee68ecde9ec..daeefef76f11 100644
+--- a/drivers/crypto/inside-secure/safexcel.c
++++ b/drivers/crypto/inside-secure/safexcel.c
+@@ -549,7 +549,6 @@ void safexcel_inv_complete(struct crypto_async_request *req, int error)
+ }
+ 
+ int safexcel_invalidate_cache(struct crypto_async_request *async,
+-			      struct safexcel_context *ctx,
+ 			      struct safexcel_crypto_priv *priv,
+ 			      dma_addr_t ctxr_dma, int ring,
+ 			      struct safexcel_request *request)
+diff --git a/drivers/crypto/inside-secure/safexcel.h b/drivers/crypto/inside-secure/safexcel.h
+index 304c5838c11a..d12c2b479a5e 100644
+--- a/drivers/crypto/inside-secure/safexcel.h
++++ b/drivers/crypto/inside-secure/safexcel.h
+@@ -539,7 +539,6 @@ void safexcel_free_context(struct safexcel_crypto_priv *priv,
+ 				  struct crypto_async_request *req,
+ 				  int result_sz);
+ int safexcel_invalidate_cache(struct crypto_async_request *async,
+-			      struct safexcel_context *ctx,
+ 			      struct safexcel_crypto_priv *priv,
+ 			      dma_addr_t ctxr_dma, int ring,
+ 			      struct safexcel_request *request);
+diff --git a/drivers/crypto/inside-secure/safexcel_cipher.c b/drivers/crypto/inside-secure/safexcel_cipher.c
+index 5af0c890646d..f5ffae2808a8 100644
+--- a/drivers/crypto/inside-secure/safexcel_cipher.c
++++ b/drivers/crypto/inside-secure/safexcel_cipher.c
+@@ -395,7 +395,7 @@ static int safexcel_cipher_send_inv(struct crypto_async_request *async,
+ 	struct safexcel_crypto_priv *priv = ctx->priv;
+ 	int ret;
+ 
+-	ret = safexcel_invalidate_cache(async, &ctx->base, priv,
++	ret = safexcel_invalidate_cache(async, priv,
+ 					ctx->base.ctxr_dma, ring, request);
+ 	if (unlikely(ret))
+ 		return ret;
+diff --git a/drivers/crypto/inside-secure/safexcel_hash.c b/drivers/crypto/inside-secure/safexcel_hash.c
+index f32985e56668..328ce02ac050 100644
+--- a/drivers/crypto/inside-secure/safexcel_hash.c
++++ b/drivers/crypto/inside-secure/safexcel_hash.c
+@@ -435,7 +435,7 @@ static int safexcel_ahash_send_inv(struct crypto_async_request *async,
+ 	struct safexcel_ahash_ctx *ctx = crypto_ahash_ctx(crypto_ahash_reqtfm(areq));
+ 	int ret;
+ 
+-	ret = safexcel_invalidate_cache(async, &ctx->base, ctx->priv,
++	ret = safexcel_invalidate_cache(async, ctx->priv,
+ 					ctx->base.ctxr_dma, ring, request);
+ 	if (unlikely(ret))
+ 		return ret;
+-- 
+2.21.0
+

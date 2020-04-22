@@ -1,0 +1,53 @@
+From 1f684c1eeed93c8acc38fbfa5a64b0bfb0260a02 Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Thu, 9 Aug 2018 15:38:46 +0200
+Subject: [PATCH 094/126] net: dsa: mv88e6xxx: Power on/off SERDES on cmode
+ change
+
+The 6390 family has a number of SERDES interfaces per port. When the
+cmode changes, eg 1000Base-X to XAUI, the SERDES interface in use will
+also change. Power down the old SERDES interface and power up the new
+SERDES interface.
+
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+---
+ drivers/net/dsa/mv88e6xxx/port.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
+index 8260310bf393..20162add36be 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.c
++++ b/drivers/net/dsa/mv88e6xxx/port.c
+@@ -19,6 +19,7 @@
+ 
+ #include "chip.h"
+ #include "port.h"
++#include "serdes.h"
+ 
+ int mv88e6xxx_port_read(struct mv88e6xxx_chip *chip, int port, int reg,
+ 			u16 *val)
+@@ -371,6 +372,10 @@ int mv88e6390x_port_set_cmode(struct mv88e6xxx_chip *chip, int port,
+ 		cmode = 0;
+ 	}
+ 
++	err = mv88e6390_serdes_power(chip, port, false);
++	if (err)
++		return err;
++
+ 	if (cmode) {
+ 		err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_STS, &reg);
+ 		if (err)
+@@ -382,6 +387,10 @@ int mv88e6390x_port_set_cmode(struct mv88e6xxx_chip *chip, int port,
+ 		err = mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_STS, reg);
+ 		if (err)
+ 			return err;
++
++		err = mv88e6390_serdes_power(chip, port, true);
++		if (err)
++			return err;
+ 	}
+ 
+ 	chip->ports[port].cmode = cmode;
+-- 
+2.21.0
+

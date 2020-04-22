@@ -1,0 +1,37 @@
+From 24003e346a2216b681081fd04a3326dd7b38a465 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marek=20Beh=C3=BAn?= <marek.behun@nic.cz>
+Date: Sun, 2 Sep 2018 21:53:00 +0200
+Subject: [PATCH 119/126] documentation: watchdog: add documentation for
+ armada-37xx-wdt
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add documentation for the kernel module parameters accepted by
+armada-37xx-wdt.
+
+Signed-off-by: Marek Behún <marek.behun@nic.cz>
+Reviewed-by: Guenter Roeck <linux@roeck-us.net>
+---
+ Documentation/watchdog/watchdog-parameters.txt | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/Documentation/watchdog/watchdog-parameters.txt b/Documentation/watchdog/watchdog-parameters.txt
+index 6f9d7b418917..d322a907d231 100644
+--- a/Documentation/watchdog/watchdog-parameters.txt
++++ b/Documentation/watchdog/watchdog-parameters.txt
+@@ -45,6 +45,11 @@ timeout: Timeout value. Limited to be 1 or 2 seconds. (default=2)
+ nowayout: Watchdog cannot be stopped once started
+ 	(default=kernel config parameter)
+ -------------------------------------------------
++armada_37xx_wdt:
++timeout: Watchdog timeout in seconds. (default=120)
++nowayout: Disable watchdog shutdown on close
++	(default=kernel config parameter)
++-------------------------------------------------
+ at91rm9200_wdt:
+ wdt_time: Watchdog time in seconds. (default=5)
+ nowayout: Watchdog cannot be stopped once started
+-- 
+2.21.0
+

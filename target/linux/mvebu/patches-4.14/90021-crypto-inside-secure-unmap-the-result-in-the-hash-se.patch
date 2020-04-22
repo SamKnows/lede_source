@@ -1,0 +1,42 @@
+From 5c41b26c94e8522502e636e9c60fcc791ce33f2e Mon Sep 17 00:00:00 2001
+From: Antoine Tenart <antoine.tenart@bootlin.com>
+Date: Tue, 13 Feb 2018 09:26:57 +0100
+Subject: [PATCH 021/126] crypto: inside-secure - unmap the result in the hash
+ send error path
+
+This patch adds a label to unmap the result buffer in the hash send
+function error path.
+
+Fixes: 1b44c5a60c13 ("crypto: inside-secure - add SafeXcel EIP197 crypto engine driver")
+Suggested-by: Ofer Heifetz <oferh@marvell.com>
+Signed-off-by: Antoine Tenart <antoine.tenart@bootlin.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/inside-secure/safexcel_hash.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/crypto/inside-secure/safexcel_hash.c b/drivers/crypto/inside-secure/safexcel_hash.c
+index b9a2bfd91c20..7b181bd6959f 100644
+--- a/drivers/crypto/inside-secure/safexcel_hash.c
++++ b/drivers/crypto/inside-secure/safexcel_hash.c
+@@ -303,7 +303,7 @@ static int safexcel_ahash_send_req(struct crypto_async_request *async, int ring,
+ 				   req->state_sz);
+ 	if (IS_ERR(rdesc)) {
+ 		ret = PTR_ERR(rdesc);
+-		goto cdesc_rollback;
++		goto unmap_result;
+ 	}
+ 
+ 	spin_unlock_bh(&priv->ring[ring].egress_lock);
+@@ -315,6 +315,8 @@ static int safexcel_ahash_send_req(struct crypto_async_request *async, int ring,
+ 	*results = 1;
+ 	return 0;
+ 
++unmap_result:
++	dma_unmap_sg(priv->dev, areq->src, req->nents, DMA_TO_DEVICE);
+ cdesc_rollback:
+ 	for (i = 0; i < n_cdesc; i++)
+ 		safexcel_ring_rollback_wptr(priv, &priv->ring[ring].cdr);
+-- 
+2.21.0
+

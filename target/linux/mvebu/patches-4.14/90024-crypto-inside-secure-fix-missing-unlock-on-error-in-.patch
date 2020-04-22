@@ -1,0 +1,36 @@
+From 716fab484fcc7258b1f9a5c9b270cdfcbb6bdae2 Mon Sep 17 00:00:00 2001
+From: "weiyongjun \\(A\\)" <weiyongjun1@huawei.com>
+Date: Tue, 13 Mar 2018 14:54:03 +0000
+Subject: [PATCH 024/126] crypto: inside-secure - fix missing unlock on error
+ in safexcel_ahash_send_req()
+
+Add the missing unlock before return from function
+safexcel_ahash_send_req() in the error handling case.
+
+Fixes: cff9a17545a3 ("crypto: inside-secure - move cache result dma mapping to request")
+Signed-off-by: Wei Yongjun <weiyongjun1@huawei.com>
+Acked-by: Antoine Tenart <antoine.tenart@bootlin.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/inside-secure/safexcel_hash.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/crypto/inside-secure/safexcel_hash.c b/drivers/crypto/inside-secure/safexcel_hash.c
+index 9703a4063cfc..a7702da92b02 100644
+--- a/drivers/crypto/inside-secure/safexcel_hash.c
++++ b/drivers/crypto/inside-secure/safexcel_hash.c
+@@ -236,8 +236,10 @@ static int safexcel_ahash_send_req(struct crypto_async_request *async, int ring,
+ 	if (cache_len) {
+ 		req->cache_dma = dma_map_single(priv->dev, req->cache,
+ 						cache_len, DMA_TO_DEVICE);
+-		if (dma_mapping_error(priv->dev, req->cache_dma))
++		if (dma_mapping_error(priv->dev, req->cache_dma)) {
++			spin_unlock_bh(&priv->ring[ring].egress_lock);
+ 			return -EINVAL;
++		}
+ 
+ 		req->cache_sz = cache_len;
+ 		first_cdesc = safexcel_add_cdesc(priv, ring, 1,
+-- 
+2.21.0
+

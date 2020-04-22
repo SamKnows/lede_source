@@ -1,0 +1,50 @@
+From 2bbe15ce77bfe8913750a4ecfda3f68edb14ef40 Mon Sep 17 00:00:00 2001
+From: Florian Fainelli <f.fainelli@gmail.com>
+Date: Thu, 10 May 2018 13:17:34 -0700
+Subject: [PATCH 077/126] net: dsa: Eliminate dsa_slave_get_link()
+
+Since we use PHYLIB to manage the per-port link indication, this will
+also be reflected correctly in the network device's carrier state, so we
+can use ethtool_op_get_link() instead.
+
+Signed-off-by: Florian Fainelli <f.fainelli@gmail.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ net/dsa/slave.c | 14 +-------------
+ 1 file changed, 1 insertion(+), 13 deletions(-)
+
+diff --git a/net/dsa/slave.c b/net/dsa/slave.c
+index cd4925f83ba4..3460cba3d315 100644
+--- a/net/dsa/slave.c
++++ b/net/dsa/slave.c
+@@ -503,18 +503,6 @@ static int dsa_slave_nway_reset(struct net_device *dev)
+ 	return -EOPNOTSUPP;
+ }
+ 
+-static u32 dsa_slave_get_link(struct net_device *dev)
+-{
+-	struct dsa_slave_priv *p = netdev_priv(dev);
+-
+-	if (p->phy != NULL) {
+-		genphy_update_link(p->phy);
+-		return p->phy->link;
+-	}
+-
+-	return -EOPNOTSUPP;
+-}
+-
+ static int dsa_slave_get_eeprom_len(struct net_device *dev)
+ {
+ 	struct dsa_slave_priv *p = netdev_priv(dev);
+@@ -1016,7 +1004,7 @@ static const struct ethtool_ops dsa_slave_ethtool_ops = {
+ 	.get_regs_len		= dsa_slave_get_regs_len,
+ 	.get_regs		= dsa_slave_get_regs,
+ 	.nway_reset		= dsa_slave_nway_reset,
+-	.get_link		= dsa_slave_get_link,
++	.get_link		= ethtool_op_get_link,
+ 	.get_eeprom_len		= dsa_slave_get_eeprom_len,
+ 	.get_eeprom		= dsa_slave_get_eeprom,
+ 	.set_eeprom		= dsa_slave_set_eeprom,
+-- 
+2.21.0
+

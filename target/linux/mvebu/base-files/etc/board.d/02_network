@@ -24,6 +24,10 @@ cznic,turris-omnia)
 		fi
 	done
 	;;
+cznic,turris-mox)
+	ucidef_set_interface_lan "$(cd /sys/class/net/; echo lan*)"
+	ucidef_set_interface_wan "eth0"
+	;;
 globalscale,espressobin|\
 globalscale,espressobin-emmc|\
 globalscale,espressobin-v7|\

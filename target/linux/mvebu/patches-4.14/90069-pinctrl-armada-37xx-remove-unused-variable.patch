@@ -1,0 +1,35 @@
+From f6b3e75c2a2d604952c5350b126b818bc4333cde Mon Sep 17 00:00:00 2001
+From: Arnd Bergmann <arnd@arndb.de>
+Date: Thu, 2 Nov 2017 15:29:13 +0100
+Subject: [PATCH 069/126] pinctrl: armada-37xx: remove unused variable
+
+A cleanup left behind a temporary variable that is now unused:
+
+drivers/pinctrl/mvebu/pinctrl-armada-37xx.c: In function 'armada_37xx_irq_startup':
+drivers/pinctrl/mvebu/pinctrl-armada-37xx.c:693:20: error: unused variable 'chip' [-Werror=unused-variable]
+
+This removes the declarations as well.
+
+Fixes: 3ee9e605caea ("pinctrl: armada-37xx: Stop using struct gpio_chip.irq_base")
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+---
+ drivers/pinctrl/mvebu/pinctrl-armada-37xx.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/pinctrl/mvebu/pinctrl-armada-37xx.c b/drivers/pinctrl/mvebu/pinctrl-armada-37xx.c
+index 639c3836259f..44897d4b9d88 100644
+--- a/drivers/pinctrl/mvebu/pinctrl-armada-37xx.c
++++ b/drivers/pinctrl/mvebu/pinctrl-armada-37xx.c
+@@ -699,8 +699,6 @@ static void armada_37xx_irq_handler(struct irq_desc *desc)
+ 
+ static unsigned int armada_37xx_irq_startup(struct irq_data *d)
+ {
+-	struct gpio_chip *chip = irq_data_get_irq_chip_data(d);
+-
+ 	/*
+ 	 * The mask field is a "precomputed bitmask for accessing the
+ 	 * chip registers" which was introduced for the generic
+-- 
+2.21.0
+

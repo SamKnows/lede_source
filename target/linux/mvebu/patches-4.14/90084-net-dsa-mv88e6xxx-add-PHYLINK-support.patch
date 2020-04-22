@@ -1,0 +1,213 @@
+From 4527d32443e37c28e2055983f61d79311d4f49fd Mon Sep 17 00:00:00 2001
+From: Russell King <rmk+kernel@armlinux.org.uk>
+Date: Thu, 10 May 2018 13:17:35 -0700
+Subject: [PATCH 084/126] net: dsa: mv88e6xxx: add PHYLINK support
+
+Add rudimentary phylink support to mv88e6xxx. This allows the driver
+using user ports with fixed links to keep operating normally. User ports
+with normal PHYs are not affected since the switch automatically manages
+their link parameters. User facing ports which use a SFP/SFF with a
+non-fixed link mode might require a call to phylink_mac_change() to
+operate properly.
+
+Signed-off-by: Russell King <rmk+kernel@armlinux.org.uk>
+[Andrew: fixed link setting after adding link polling]
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+[florian: expand commit message]
+Signed-off-by: Florian Fainelli <f.fainelli@gmail.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 83 ++++++++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/port.c | 39 +++++++++++++++
+ drivers/net/dsa/mv88e6xxx/port.h |  3 ++
+ 3 files changed, 125 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 14ae3a68d3c6..53374a6f79cb 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -31,6 +31,7 @@
+ #include <linux/netdevice.h>
+ #include <linux/gpio/consumer.h>
+ #include <linux/phy.h>
++#include <linux/phylink.h>
+ #include <net/dsa.h>
+ 
+ #include "chip.h"
+@@ -532,6 +533,83 @@ static void mv88e6xxx_adjust_link(struct dsa_switch *ds, int port,
+ 		dev_err(ds->dev, "p%d: failed to configure MAC\n", port);
+ }
+ 
++static void mv88e6xxx_validate(struct dsa_switch *ds, int port,
++			       unsigned long *supported,
++			       struct phylink_link_state *state)
++{
++}
++
++static int mv88e6xxx_link_state(struct dsa_switch *ds, int port,
++				struct phylink_link_state *state)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	mutex_lock(&chip->reg_lock);
++	err = mv88e6xxx_port_link_state(chip, port, state);
++	mutex_unlock(&chip->reg_lock);
++
++	return err;
++}
++
++static void mv88e6xxx_mac_config(struct dsa_switch *ds, int port,
++				 unsigned int mode,
++				 const struct phylink_link_state *state)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int speed, duplex, link, err;
++
++	if (mode == MLO_AN_PHY)
++		return;
++
++	if (mode == MLO_AN_FIXED) {
++		link = LINK_FORCED_UP;
++		speed = state->speed;
++		duplex = state->duplex;
++	} else {
++		speed = SPEED_UNFORCED;
++		duplex = DUPLEX_UNFORCED;
++		link = LINK_UNFORCED;
++	}
++
++	mutex_lock(&chip->reg_lock);
++	err = mv88e6xxx_port_setup_mac(chip, port, link, speed, duplex,
++				       state->interface);
++	mutex_unlock(&chip->reg_lock);
++
++	if (err && err != -EOPNOTSUPP)
++		dev_err(ds->dev, "p%d: failed to configure MAC\n", port);
++}
++
++static void mv88e6xxx_mac_link_force(struct dsa_switch *ds, int port, int link)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++	int err;
++
++	mutex_lock(&chip->reg_lock);
++	err = chip->info->ops->port_set_link(chip, port, link);
++	mutex_unlock(&chip->reg_lock);
++
++	if (err)
++		dev_err(chip->dev, "p%d: failed to force MAC link\n", port);
++}
++
++static void mv88e6xxx_mac_link_down(struct dsa_switch *ds, int port,
++				    unsigned int mode,
++				    phy_interface_t interface)
++{
++	if (mode == MLO_AN_FIXED)
++		mv88e6xxx_mac_link_force(ds, port, LINK_FORCED_DOWN);
++}
++
++static void mv88e6xxx_mac_link_up(struct dsa_switch *ds, int port,
++				  unsigned int mode, phy_interface_t interface,
++				  struct phy_device *phydev)
++{
++	if (mode == MLO_AN_FIXED)
++		mv88e6xxx_mac_link_force(ds, port, LINK_FORCED_UP);
++}
++
+ static int mv88e6xxx_stats_snapshot(struct mv88e6xxx_chip *chip, int port)
+ {
+ 	if (!chip->info->ops->stats_snapshot)
+@@ -3918,6 +3996,11 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+ 	.setup			= mv88e6xxx_setup,
+ 	.set_addr		= mv88e6xxx_set_addr,
+ 	.adjust_link		= mv88e6xxx_adjust_link,
++	.phylink_validate	= mv88e6xxx_validate,
++	.phylink_mac_link_state	= mv88e6xxx_link_state,
++	.phylink_mac_config	= mv88e6xxx_mac_config,
++	.phylink_mac_link_down	= mv88e6xxx_mac_link_down,
++	.phylink_mac_link_up	= mv88e6xxx_mac_link_up,
+ 	.get_strings		= mv88e6xxx_get_strings,
+ 	.get_ethtool_stats	= mv88e6xxx_get_ethtool_stats,
+ 	.get_sset_count		= mv88e6xxx_get_sset_count,
+diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
+index 2cffecfe86e3..c5248b30186b 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.c
++++ b/drivers/net/dsa/mv88e6xxx/port.c
+@@ -15,6 +15,7 @@
+ #include <linux/bitfield.h>
+ #include <linux/if_bridge.h>
+ #include <linux/phy.h>
++#include <linux/phylink.h>
+ 
+ #include "chip.h"
+ #include "port.h"
+@@ -377,6 +378,44 @@ int mv88e6xxx_port_get_cmode(struct mv88e6xxx_chip *chip, int port, u8 *cmode)
+ 	return 0;
+ }
+ 
++int mv88e6xxx_port_link_state(struct mv88e6xxx_chip *chip, int port,
++			      struct phylink_link_state *state)
++{
++	int err;
++	u16 reg;
++
++	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_STS, &reg);
++	if (err)
++		return err;
++
++	switch (reg & MV88E6XXX_PORT_STS_SPEED_MASK) {
++	case MV88E6XXX_PORT_STS_SPEED_10:
++		state->speed = SPEED_10;
++		break;
++	case MV88E6XXX_PORT_STS_SPEED_100:
++		state->speed = SPEED_100;
++		break;
++	case MV88E6XXX_PORT_STS_SPEED_1000:
++		state->speed = SPEED_1000;
++		break;
++	case MV88E6XXX_PORT_STS_SPEED_10000:
++		if ((reg &MV88E6XXX_PORT_STS_CMODE_MASK) ==
++		    MV88E6XXX_PORT_STS_CMODE_2500BASEX)
++			state->speed = SPEED_2500;
++		else
++			state->speed = SPEED_10000;
++		break;
++	}
++
++	state->duplex = reg & MV88E6XXX_PORT_STS_DUPLEX ?
++			DUPLEX_FULL : DUPLEX_HALF;
++	state->link = !!(reg & MV88E6XXX_PORT_STS_LINK);
++	state->an_enabled = 1;
++	state->an_complete = state->link;
++
++	return 0;
++}
++
+ /* Offset 0x02: Jamming Control
+  *
+  * Do not limit the period of time that this port can be paused for by
+diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
+index ccdc67fe9079..7dbfa44814a7 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.h
++++ b/drivers/net/dsa/mv88e6xxx/port.h
+@@ -29,6 +29,7 @@
+ #define MV88E6XXX_PORT_STS_SPEED_10		0x0000
+ #define MV88E6XXX_PORT_STS_SPEED_100		0x0100
+ #define MV88E6XXX_PORT_STS_SPEED_1000		0x0200
++#define MV88E6XXX_PORT_STS_SPEED_10000		0x0300
+ #define MV88E6352_PORT_STS_EEE			0x0040
+ #define MV88E6165_PORT_STS_AM_DIS		0x0040
+ #define MV88E6185_PORT_STS_MGMII		0x0040
+@@ -305,6 +306,8 @@ int mv88e6390_port_pause_limit(struct mv88e6xxx_chip *chip, int port, u8 in,
+ int mv88e6390x_port_set_cmode(struct mv88e6xxx_chip *chip, int port,
+ 			      phy_interface_t mode);
+ int mv88e6xxx_port_get_cmode(struct mv88e6xxx_chip *chip, int port, u8 *cmode);
++int mv88e6xxx_port_link_state(struct mv88e6xxx_chip *chip, int port,
++			      struct phylink_link_state *state);
+ int mv88e6xxx_port_set_map_da(struct mv88e6xxx_chip *chip, int port);
+ int mv88e6095_port_set_upstream_port(struct mv88e6xxx_chip *chip, int port,
+ 				     int upstream_port);
+-- 
+2.21.0
+

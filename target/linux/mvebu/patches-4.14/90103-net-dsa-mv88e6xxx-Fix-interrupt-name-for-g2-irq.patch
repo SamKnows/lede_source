@@ -1,0 +1,41 @@
+From caa8f17b134d1ed638b2a2b069691f09032b7cd0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Uwe=20Kleine-K=C3=B6nig?= <u.kleine-koenig@pengutronix.de>
+Date: Tue, 20 Mar 2018 10:44:42 +0100
+Subject: [PATCH 103/126] net: dsa: mv88e6xxx: Fix interrupt name for g2 irq
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This changes the respective line in /proc/interrupts from
+
+ 49:          x          x  mv88e6xxx-g1   7 Edge      mv88e6xxx-g1
+
+to
+
+ 49:          x          x  mv88e6xxx-g1   7 Edge      mv88e6xxx-g2
+
+which makes more sense.
+
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Signed-off-by: Uwe Kleine-König <u.kleine-koenig@pengutronix.de>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/dsa/mv88e6xxx/global2.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/global2.c b/drivers/net/dsa/mv88e6xxx/global2.c
+index f133690e8b92..ddf8baaf5ca7 100644
+--- a/drivers/net/dsa/mv88e6xxx/global2.c
++++ b/drivers/net/dsa/mv88e6xxx/global2.c
+@@ -1089,7 +1089,7 @@ int mv88e6xxx_g2_irq_setup(struct mv88e6xxx_chip *chip)
+ 
+ 	err = request_threaded_irq(chip->device_irq, NULL,
+ 				   mv88e6xxx_g2_irq_thread_fn,
+-				   IRQF_ONESHOT, "mv88e6xxx-g1", chip);
++				   IRQF_ONESHOT, "mv88e6xxx-g2", chip);
+ 	if (err)
+ 		goto out;
+ 
+-- 
+2.21.0
+

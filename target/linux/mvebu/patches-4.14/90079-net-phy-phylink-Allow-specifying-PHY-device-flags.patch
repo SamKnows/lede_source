@@ -1,0 +1,71 @@
+From 3e301ce5884a77dae23207dcbda9a24e85f42de7 Mon Sep 17 00:00:00 2001
+From: Florian Fainelli <f.fainelli@gmail.com>
+Date: Tue, 12 Dec 2017 16:00:25 -0800
+Subject: [PATCH 079/126] net: phy: phylink: Allow specifying PHY device flags
+
+In order to let subsystems like DSA fully utilize PHYLINK, we need to be able
+to communicate phy_device::flags from of_phy_{connect,attach} even when using
+PHYLINK APIs.
+
+Signed-off-by: Florian Fainelli <f.fainelli@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/ethernet/marvell/mvneta.c | 2 +-
+ drivers/net/phy/phylink.c             | 6 ++++--
+ include/linux/phylink.h               | 2 +-
+ 3 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/ethernet/marvell/mvneta.c b/drivers/net/ethernet/marvell/mvneta.c
+index a837a053bdad..2986f8f1ae4a 100644
+--- a/drivers/net/ethernet/marvell/mvneta.c
++++ b/drivers/net/ethernet/marvell/mvneta.c
+@@ -3449,7 +3449,7 @@ static const struct phylink_mac_ops mvneta_phylink_ops = {
+ static int mvneta_mdio_probe(struct mvneta_port *pp)
+ {
+ 	struct ethtool_wolinfo wol = { .cmd = ETHTOOL_GWOL };
+-	int err = phylink_of_phy_connect(pp->phylink, pp->dn);
++	int err = phylink_of_phy_connect(pp->phylink, pp->dn, 0);
+ 	if (err)
+ 		netdev_err(pp->dev, "could not attach PHY\n");
+ 
+diff --git a/drivers/net/phy/phylink.c b/drivers/net/phy/phylink.c
+index 0a5abf1be642..1480979da9de 100644
+--- a/drivers/net/phy/phylink.c
++++ b/drivers/net/phy/phylink.c
+@@ -687,7 +687,8 @@ int phylink_connect_phy(struct phylink *pl, struct phy_device *phy)
+ }
+ EXPORT_SYMBOL_GPL(phylink_connect_phy);
+ 
+-int phylink_of_phy_connect(struct phylink *pl, struct device_node *dn)
++int phylink_of_phy_connect(struct phylink *pl, struct device_node *dn,
++			   u32 flags)
+ {
+ 	struct device_node *phy_node;
+ 	struct phy_device *phy_dev;
+@@ -711,7 +712,8 @@ int phylink_of_phy_connect(struct phylink *pl, struct device_node *dn)
+ 		return 0;
+ 	}
+ 
+-	phy_dev = of_phy_attach(pl->netdev, phy_node, 0, pl->link_interface);
++	phy_dev = of_phy_attach(pl->netdev, phy_node, flags,
++				pl->link_interface);
+ 	/* We're done with the phy_node handle */
+ 	of_node_put(phy_node);
+ 
+diff --git a/include/linux/phylink.h b/include/linux/phylink.h
+index c241a0b6c29c..afb74404e8bf 100644
+--- a/include/linux/phylink.h
++++ b/include/linux/phylink.h
+@@ -107,7 +107,7 @@ struct phylink *phylink_create(struct net_device *, struct device_node *,
+ void phylink_destroy(struct phylink *);
+ 
+ int phylink_connect_phy(struct phylink *, struct phy_device *);
+-int phylink_of_phy_connect(struct phylink *, struct device_node *);
++int phylink_of_phy_connect(struct phylink *, struct device_node *, u32 flags);
+ void phylink_disconnect_phy(struct phylink *);
+ 
+ void phylink_mac_change(struct phylink *, bool up);
+-- 
+2.21.0
+

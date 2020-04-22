@@ -1,0 +1,42 @@
+From f2422e411550f9809e416ff799af518c5e3149d4 Mon Sep 17 00:00:00 2001
+From: Antoine Tenart <antoine.tenart@free-electrons.com>
+Date: Tue, 26 Dec 2017 17:16:53 +0100
+Subject: [PATCH 036/126] arm64: dts: marvell: armada-37xx: add a crypto node
+
+This patch adds a crypto node describing the EIP97 engine found in
+Armada 37xx SoCs. The cryptographic engine is enabled by default.
+
+Signed-off-by: Antoine Tenart <antoine.tenart@free-electrons.com>
+Signed-off-by: Gregory CLEMENT <gregory.clement@free-electrons.com>
+---
+ arch/arm64/boot/dts/marvell/armada-37xx.dtsi | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/marvell/armada-37xx.dtsi b/arch/arm64/boot/dts/marvell/armada-37xx.dtsi
+index 8c0cf7efac65..6842cae5b35b 100644
+--- a/arch/arm64/boot/dts/marvell/armada-37xx.dtsi
++++ b/arch/arm64/boot/dts/marvell/armada-37xx.dtsi
+@@ -293,6 +293,20 @@
+ 				};
+ 			};
+ 
++			crypto: crypto@90000 {
++				compatible = "inside-secure,safexcel-eip97";
++				reg = <0x90000 0x20000>;
++				interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>,
++					     <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>,
++					     <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>,
++					     <GIC_SPI 22 IRQ_TYPE_LEVEL_HIGH>,
++					     <GIC_SPI 23 IRQ_TYPE_LEVEL_HIGH>,
++					     <GIC_SPI 24 IRQ_TYPE_LEVEL_HIGH>;
++				interrupt-names = "mem", "ring0", "ring1",
++						  "ring2", "ring3", "eip";
++				clocks = <&nb_periph_clk 15>;
++			};
++
+ 			sdhci1: sdhci@d0000 {
+ 				compatible = "marvell,armada-3700-sdhci",
+ 					     "marvell,sdhci-xenon";
+-- 
+2.21.0
+

@@ -1,0 +1,35 @@
+From ee69787b4f2cbe2fc60e08b5288e0879cc328503 Mon Sep 17 00:00:00 2001
+From: Florian Fainelli <f.fainelli@gmail.com>
+Date: Tue, 12 Dec 2017 16:00:27 -0800
+Subject: [PATCH 081/126] net: phy: phylink: Remove error message
+
+Some subsystems like DSA may be trying to connect to a PHY through OF first,
+and then attempt a connect using a local MDIO bus, remove the error message:
+"unable to find PHY node" so we can let MAC drivers whether to print it or not.
+
+Signed-off-by: Florian Fainelli <f.fainelli@gmail.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/phy/phylink.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/net/phy/phylink.c b/drivers/net/phy/phylink.c
+index ddba452c2534..4b63bf9abb32 100644
+--- a/drivers/net/phy/phylink.c
++++ b/drivers/net/phy/phylink.c
+@@ -711,10 +711,8 @@ int phylink_of_phy_connect(struct phylink *pl, struct device_node *dn,
+ 		phy_node = of_parse_phandle(dn, "phy-device", 0);
+ 
+ 	if (!phy_node) {
+-		if (pl->link_an_mode == MLO_AN_PHY) {
+-			netdev_err(pl->netdev, "unable to find PHY node\n");
++		if (pl->link_an_mode == MLO_AN_PHY)
+ 			return -ENODEV;
+-		}
+ 		return 0;
+ 	}
+ 
+-- 
+2.21.0
+

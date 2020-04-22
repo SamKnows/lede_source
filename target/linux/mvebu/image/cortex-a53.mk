@@ -32,6 +32,17 @@ define Device/globalscale_espressobin-v7-emmc
 endef
 TARGET_DEVICES += globalscale_espressobin-v7-emmc
 
+define Device/cznic-mox
+  KERNEL_NAME := Image dtbs
+  KERNEL := kernel-bin
+  DEVICE_TITLE := MOX (CZ.NICs Marvell Armada 3720 Based Board)
+  DEVICE_PACKAGES := kmod-usb2 kmod-gpio-button-hotplug
+  DEVICE_DTS := armada-3720-turris-mox
+  DTS_DIR := $(DTS_DIR)/marvell
+  SUPPORTED_DEVICES := cznic,mox
+endef
+TARGET_DEVICES += cznic-mox
+
 define Device/marvell_armada-3720-db
   $(call Device/Default-arm64)
   DEVICE_TITLE := Marvell Armada 3720 Development Board DB-88F3720-DDR3

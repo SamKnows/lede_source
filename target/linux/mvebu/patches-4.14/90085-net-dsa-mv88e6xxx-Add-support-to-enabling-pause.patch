@@ -1,0 +1,171 @@
+From b6bd83fc50c6c7587d76c748a1e5728663a1307f Mon Sep 17 00:00:00 2001
+From: Andrew Lunn <andrew@lunn.ch>
+Date: Thu, 9 Aug 2018 15:38:37 +0200
+Subject: [PATCH 085/126] net: dsa: mv88e6xxx: Add support to enabling pause
+
+The 6185 can enable/disable 802.3z pause be setting the MyPause bit in
+the port status register. Add an op to support this.
+
+Signed-off-by: Russell King <rmk+kernel@armlinux.org.uk>
+Signed-off-by: Andrew Lunn <andrew@lunn.ch>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 20 ++++++++++++++++----
+ drivers/net/dsa/mv88e6xxx/chip.h |  7 +++++++
+ drivers/net/dsa/mv88e6xxx/port.c | 23 +++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/port.h |  2 ++
+ 4 files changed, 48 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 53374a6f79cb..323942f5257d 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -466,7 +466,7 @@ int mv88e6xxx_update(struct mv88e6xxx_chip *chip, int addr, int reg, u16 update)
+ }
+ 
+ static int mv88e6xxx_port_setup_mac(struct mv88e6xxx_chip *chip, int port,
+-				    int link, int speed, int duplex,
++				    int link, int speed, int duplex, int pause,
+ 				    phy_interface_t mode)
+ {
+ 	int err;
+@@ -485,6 +485,12 @@ static int mv88e6xxx_port_setup_mac(struct mv88e6xxx_chip *chip, int port,
+ 			goto restore_link;
+ 	}
+ 
++	if (chip->info->ops->port_set_pause) {
++		err = chip->info->ops->port_set_pause(chip, port, pause);
++		if (err)
++			goto restore_link;
++	}
++
+ 	if (chip->info->ops->port_set_duplex) {
+ 		err = chip->info->ops->port_set_duplex(chip, port, duplex);
+ 		if (err && err != -EOPNOTSUPP)
+@@ -526,7 +532,8 @@ static void mv88e6xxx_adjust_link(struct dsa_switch *ds, int port,
+ 
+ 	mutex_lock(&chip->reg_lock);
+ 	err = mv88e6xxx_port_setup_mac(chip, port, phydev->link, phydev->speed,
+-				       phydev->duplex, phydev->interface);
++				       phydev->duplex, phydev->pause,
++				       phydev->interface);
+ 	mutex_unlock(&chip->reg_lock);
+ 
+ 	if (err && err != -EOPNOTSUPP)
+@@ -557,7 +564,7 @@ static void mv88e6xxx_mac_config(struct dsa_switch *ds, int port,
+ 				 const struct phylink_link_state *state)
+ {
+ 	struct mv88e6xxx_chip *chip = ds->priv;
+-	int speed, duplex, link, err;
++	int speed, duplex, link, pause, err;
+ 
+ 	if (mode == MLO_AN_PHY)
+ 		return;
+@@ -571,9 +578,10 @@ static void mv88e6xxx_mac_config(struct dsa_switch *ds, int port,
+ 		duplex = DUPLEX_UNFORCED;
+ 		link = LINK_UNFORCED;
+ 	}
++	pause = !!phylink_test(state->advertising, Pause);
+ 
+ 	mutex_lock(&chip->reg_lock);
+-	err = mv88e6xxx_port_setup_mac(chip, port, link, speed, duplex,
++	err = mv88e6xxx_port_setup_mac(chip, port, link, speed, duplex, pause,
+ 				       state->interface);
+ 	mutex_unlock(&chip->reg_lock);
+ 
+@@ -1811,10 +1819,12 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+ 	if (dsa_is_cpu_port(ds, port) || dsa_is_dsa_port(ds, port))
+ 		err = mv88e6xxx_port_setup_mac(chip, port, LINK_FORCED_UP,
+ 					       SPEED_MAX, DUPLEX_FULL,
++					       PAUSE_OFF,
+ 					       PHY_INTERFACE_MODE_NA);
+ 	else
+ 		err = mv88e6xxx_port_setup_mac(chip, port, LINK_UNFORCED,
+ 					       SPEED_UNFORCED, DUPLEX_UNFORCED,
++					       PAUSE_ON,
+ 					       PHY_INTERFACE_MODE_NA);
+ 	if (err)
+ 		return err;
+@@ -2579,6 +2589,7 @@ static const struct mv88e6xxx_ops mv88e6131_ops = {
+ 	.port_set_jumbo_size = mv88e6165_port_set_jumbo_size,
+ 	.port_egress_rate_limiting = mv88e6097_port_egress_rate_limiting,
+ 	.port_pause_limit = mv88e6097_port_pause_limit,
++	.port_set_pause = mv88e6185_port_set_pause,
+ 	.stats_snapshot = mv88e6xxx_g1_stats_snapshot,
+ 	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
+ 	.stats_get_strings = mv88e6095_stats_get_strings,
+@@ -2836,6 +2847,7 @@ static const struct mv88e6xxx_ops mv88e6185_ops = {
+ 	.port_set_egress_floods = mv88e6185_port_set_egress_floods,
+ 	.port_egress_rate_limiting = mv88e6095_port_egress_rate_limiting,
+ 	.port_set_upstream_port = mv88e6095_port_set_upstream_port,
++	.port_set_pause = mv88e6185_port_set_pause,
+ 	.stats_snapshot = mv88e6xxx_g1_stats_snapshot,
+ 	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
+ 	.stats_get_strings = mv88e6095_stats_get_strings,
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
+index 0913eeca53b3..439cae17095b 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.h
++++ b/drivers/net/dsa/mv88e6xxx/chip.h
+@@ -279,6 +279,13 @@ struct mv88e6xxx_ops {
+ 	 */
+ 	int (*port_set_duplex)(struct mv88e6xxx_chip *chip, int port, int dup);
+ 
++#define PAUSE_ON		1
++#define PAUSE_OFF		0
++
++	/* Enable/disable sending Pause */
++	int (*port_set_pause)(struct mv88e6xxx_chip *chip, int port,
++			      int pause);
++
+ #define SPEED_MAX		INT_MAX
+ #define SPEED_UNFORCED		-2
+ 
+diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
+index c5248b30186b..c72eec63e8f6 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.c
++++ b/drivers/net/dsa/mv88e6xxx/port.c
+@@ -36,6 +36,29 @@ int mv88e6xxx_port_write(struct mv88e6xxx_chip *chip, int port, int reg,
+ 	return mv88e6xxx_write(chip, addr, reg, val);
+ }
+ 
++/* Offset 0x00: MAC (or PCS or Physical) Status Register
++ *
++ * For most devices, this is read only. However the 6185 has the MyPause
++ * bit read/write.
++ */
++int mv88e6185_port_set_pause(struct mv88e6xxx_chip *chip, int port,
++			     int pause)
++{
++	u16 reg;
++	int err;
++
++	err = mv88e6xxx_port_read(chip, port, MV88E6XXX_PORT_STS, &reg);
++	if (err)
++		return err;
++
++	if (pause)
++		reg |= MV88E6XXX_PORT_STS_MY_PAUSE;
++	else
++		reg &= ~MV88E6XXX_PORT_STS_MY_PAUSE;
++
++	return mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_STS, reg);
++}
++
+ /* Offset 0x01: MAC (or PCS or Physical) Control Register
+  *
+  * Link, Duplex and Flow Control have one force bit, one value bit.
+diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
+index 7dbfa44814a7..c2fce7c1cb37 100644
+--- a/drivers/net/dsa/mv88e6xxx/port.h
++++ b/drivers/net/dsa/mv88e6xxx/port.h
+@@ -252,6 +252,8 @@ int mv88e6xxx_port_read(struct mv88e6xxx_chip *chip, int port, int reg,
+ int mv88e6xxx_port_write(struct mv88e6xxx_chip *chip, int port, int reg,
+ 			 u16 val);
+ 
++int mv88e6185_port_set_pause(struct mv88e6xxx_chip *chip, int port,
++			     int pause);
+ int mv88e6352_port_set_rgmii_delay(struct mv88e6xxx_chip *chip, int port,
+ 				   phy_interface_t mode);
+ int mv88e6390_port_set_rgmii_delay(struct mv88e6xxx_chip *chip, int port,
+-- 
+2.21.0
+
