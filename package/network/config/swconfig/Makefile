@@ -19,7 +19,7 @@ include $(INCLUDE_DIR)/kernel.mk
 define Package/swconfig
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+libuci +libnl-tiny
+  DEPENDS:=+libuci +libnl
   TITLE:=Switch configuration utility
 endef
 
@@ -28,7 +28,7 @@ TARGET_LDFLAGS += -flto=jobserver
 
 TARGET_CPPFLAGS := \
 	-D_GNU_SOURCE \
-	-I$(STAGING_DIR)/usr/include/libnl-tiny \
+	-I$(STAGING_DIR)/usr/include/libnl3 \
 	-I$(PKG_BUILD_DIR) \
 	$(TARGET_CPPFLAGS) \
 	-I$(LINUX_DIR)/user_headers/include
@@ -37,7 +37,7 @@ define Build/Compile
 	CFLAGS="$(TARGET_CPPFLAGS) $(TARGET_CFLAGS)" \
 	$(MAKE) -C $(PKG_BUILD_DIR) \
 		$(TARGET_CONFIGURE_OPTS) \
-		LIBS="$(TARGET_LDFLAGS) -lnl-tiny -lm -luci -lubox"
+		LIBS="$(TARGET_LDFLAGS) -lnl-genl -lnl -lm -luci -lubox"
 endef
 
 define Build/InstallDev
