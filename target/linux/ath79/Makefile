@@ -4,7 +4,7 @@ ARCH:=mips
 BOARD:=ath79
 BOARDNAME:=Atheros ATH79 (DTS)
 DEVICE_TYPE:=samknows
-CPU_TYPE:=24kc
+CPU_TYPE:=74kc
 SUBTARGETS:=generic nand tiny
 
 FEATURES:=ramdisk
