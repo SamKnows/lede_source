@@ -9,6 +9,7 @@ include $(TOPDIR)/rules.mk
 ARCH:=aarch64
 BOARD:=mvebu64
 BOARDNAME:=Marvell 64b Boards
+DEVICE_TYPE:=samknows
 FEATURES:=gpio usb pci pcie nand ramdisk targz
 MAINTAINER:=Vladimir Vid <vladimir.vid@sartura.hr>
 
