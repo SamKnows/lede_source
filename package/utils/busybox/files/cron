@@ -22,10 +22,13 @@ start_service () {
 		}
 	}
 
+	timezone=$(uci_get "system.@system[0].crontimezone")
+
 	mkdir -p /var/spool/cron
 	ln -s /etc/crontabs /var/spool/cron/ 2>/dev/null
 
 	procd_open_instance
+	[ -n "${timezone}" ] && procd_set_param env TZ="$timezone"
 	procd_set_param command "$PROG" -f -c /etc/crontabs -l ${loglevel:-5}
 	procd_close_instance
 }
