@@ -1,0 +1,28 @@
+From 7ca0dc602acc530d874ef6c32c74cce9a1c5a10b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marek=20Beh=C3=BAn?= <marek.behun@nic.cz>
+Date: Tue, 27 Oct 2020 01:57:47 +0100
+Subject: [PATCH 3/4] dts: Turris MOX: support changing to 2500base-x mode
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Marek Behún <marek.behun@nic.cz>
+---
+ arch/arm64/boot/dts/marvell/armada-3720-turris-mox.dts | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/marvell/armada-3720-turris-mox.dts b/arch/arm64/boot/dts/marvell/armada-3720-turris-mox.dts
+index f397be1c4244..09cfe313efd4 100644
+--- a/arch/arm64/boot/dts/marvell/armada-3720-turris-mox.dts
++++ b/arch/arm64/boot/dts/marvell/armada-3720-turris-mox.dts
+@@ -183,6 +183,7 @@
+ };
+ 
+ &eth1 {
++	reg = <0x40000 0x4000>, <0x18300 0x300>;
+ 	phy-mode = "1000base-x";
+ 	managed = "in-band-status";
+ };
+-- 
+2.26.2
+

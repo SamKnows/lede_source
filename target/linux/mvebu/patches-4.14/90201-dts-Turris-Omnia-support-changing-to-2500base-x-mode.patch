@@ -1,0 +1,28 @@
+From 39a7f4999b424cb14a30d76ef4b95de8f050b6eb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marek=20Beh=C3=BAn?= <marek.behun@nic.cz>
+Date: Mon, 26 Oct 2020 21:54:40 +0100
+Subject: [PATCH 2/4] dts: Turris Omnia: support changing to 2500base-x mode
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Marek Behún <marek.behun@nic.cz>
+---
+ arch/arm/boot/dts/armada-385-turris-omnia.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/boot/dts/armada-385-turris-omnia.dtsi b/arch/arm/boot/dts/armada-385-turris-omnia.dtsi
+index 3bfcc84ade4a..3583a7926fc0 100644
+--- a/arch/arm/boot/dts/armada-385-turris-omnia.dtsi
++++ b/arch/arm/boot/dts/armada-385-turris-omnia.dtsi
+@@ -154,6 +154,7 @@
+ 
+ /* WAN dual-personality port */
+ &eth2 {
++	reg = <0x34000 0x4000>, <0x18300 0x100>, <0x18460 0x4>;
+         status = "okay";
+ };
+ 
+-- 
+2.26.2
+

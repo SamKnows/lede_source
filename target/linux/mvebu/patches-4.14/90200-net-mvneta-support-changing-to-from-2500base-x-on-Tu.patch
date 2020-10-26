@@ -1,0 +1,200 @@
+From aad7425b4d4697e92f1740f7a9e9d0b71f16d080 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marek=20Beh=C3=BAn?= <marek.behun@nic.cz>
+Date: Mon, 26 Oct 2020 21:54:13 +0100
+Subject: [PATCH 1/4] net: mvneta: support changing to/from 2500base-x on
+ Turris Omnia/MOX
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Marek Behún <marek.behun@nic.cz>
+---
+ drivers/net/ethernet/marvell/mvneta.c | 113 +++++++++++++++++++++++++-
+ 1 file changed, 112 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/marvell/mvneta.c b/drivers/net/ethernet/marvell/mvneta.c
+index 1c7d03a2d8b2..42d68fe305d3 100644
+--- a/drivers/net/ethernet/marvell/mvneta.c
++++ b/drivers/net/ethernet/marvell/mvneta.c
+@@ -18,6 +18,7 @@
+ #include <linux/inetdevice.h>
+ #include <linux/interrupt.h>
+ #include <linux/io.h>
++#include <linux/iopoll.h>
+ #include <linux/kernel.h>
+ #include <linux/mbus.h>
+ #include <linux/module.h>
+@@ -221,6 +222,8 @@
+ #define      MVNETA_GMAC_AN_FLOW_CTRL_EN         BIT(11)
+ #define      MVNETA_GMAC_CONFIG_FULL_DUPLEX      BIT(12)
+ #define      MVNETA_GMAC_AN_DUPLEX_EN            BIT(13)
++#define MVNETA_GMAC_CTRL_4                       0x2c90
++#define      MVNETA_GMAC4_SHORT_PREAMBLE_ENABLE  BIT(1)
+ #define MVNETA_MIB_COUNTERS_BASE                 0x3000
+ #define      MVNETA_MIB_LATE_COLLISION           0x7c
+ #define MVNETA_DA_FILT_SPEC_MCAST                0x3400
+@@ -3018,6 +3021,93 @@ static int mvneta_setup_txqs(struct mvneta_port *pp)
+ 	return 0;
+ }
+ 
++static void mvneta_config_interface(struct mvneta_port *pp,
++				    phy_interface_t interface)
++{
++	struct platform_device *pdev = to_platform_device(pp->dev->dev.parent);
++	void __iomem *comphy;
++	struct resource *res;
++	u32 reg;
++	int ret;
++
++	of_property_read_u32(pp->dn, "reg", &reg);
++
++	if (of_machine_is_compatible("cznic,turris-omnia") && reg == 0x34000) {
++		void __iomem *conf;
++		u32 conf_val;
++
++		res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
++		comphy = ioremap(res->start, resource_size(res));
++
++		res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
++		conf = ioremap(res->start, resource_size(res));
++
++		conf_val = readl_relaxed(conf);
++		conf_val &= ~0x4;
++		writel(conf_val, conf);
++
++		reg = readl_relaxed(comphy + 0xc8);
++		reg &= ~((0xf << 22) | (0xf << 26));
++		if (interface == PHY_INTERFACE_MODE_2500BASEX)
++			reg |= (8 << 22) | (8 << 26);
++		else
++			reg |= (6 << 22) | (6 << 26);
++		writel(reg, comphy + 0xc8);
++
++		ret = readl_relaxed_poll_timeout_atomic(comphy + 0xc8 + 0x18,
++							reg, (reg & 0xc) == 0xc,
++							1000, 150000);
++		if (ret) {
++			netdev_err(pp->dev, "comphy timed out\n");
++		} else {
++			conf_val |= 0x4;
++			writel(conf_val, conf);
++		}
++		netdev_dbg(pp->dev, "comphy mode set to %s\n",
++			   phy_modes(interface));
++
++		iounmap(conf);
++		iounmap(comphy);
++	} else if (of_machine_is_compatible("cznic,turris-mox") &&
++		   reg == 0x40000) {
++		res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
++		comphy = ioremap(res->start, resource_size(res));
++
++		reg = readl_relaxed(comphy + 0x28);
++		reg |= BIT(11) | BIT(12);
++		writel(reg, comphy + 0x28);
++
++		mdelay(10);
++
++		reg &= ~BIT(12);
++		writel(reg, comphy + 0x28);
++
++		reg &= ~((0xf << 22) | (0xf << 26));
++		if (interface == PHY_INTERFACE_MODE_2500BASEX)
++			reg |= (8 << 22) | (8 << 26);
++		else
++			reg |= (6 << 22) | (6 << 26);
++		writel(reg, comphy + 0x28);
++
++		reg &= ~BIT(11);
++		writel(reg, comphy + 0x28);
++
++		mdelay(10);
++
++		ret = readl_relaxed_poll_timeout_atomic(comphy + 0x28 + 0x18,
++							reg, (reg & 0xc) == 0xc,
++							1000, 150000);
++		if (ret)
++			netdev_err(pp->dev, "comphy timed out\n");
++		netdev_dbg(pp->dev, "comphy mode set to %s\n",
++			   phy_modes(interface));
++
++		iounmap(comphy);
++	}
++
++	pp->phy_interface = interface;
++}
++
+ static void mvneta_start_dev(struct mvneta_port *pp)
+ {
+ 	int cpu;
+@@ -3212,6 +3302,7 @@ static void mvneta_validate(struct net_device *ndev, unsigned long *supported,
+ 			    struct phylink_link_state *state)
+ {
+ 	__ETHTOOL_DECLARE_LINK_MODE_MASK(mask) = { 0, };
++	struct mvneta_port *pp = netdev_priv(ndev);
+ 
+ 	/* We only support QSGMII, SGMII, 802.3z and RGMII modes */
+ 	if (state->interface != PHY_INTERFACE_MODE_NA &&
+@@ -3233,6 +3324,11 @@ static void mvneta_validate(struct net_device *ndev, unsigned long *supported,
+ 	phylink_set(mask, 1000baseT_Full);
+ 	phylink_set(mask, 1000baseX_Full);
+ 
++	if (pp->id == 2) {
++		phylink_set(mask, 2500baseT_Full);
++		phylink_set(mask, 2500baseX_Full);
++	}
++
+ 	if (!phy_interface_mode_is_8023z(state->interface)) {
+ 		/* 10M and 100M are only supported in non-802.3z mode */
+ 		phylink_set(mask, 10baseT_Half);
+@@ -3256,7 +3352,9 @@ static int mvneta_mac_link_state(struct net_device *ndev,
+ 	gmac_stat = mvreg_read(pp, MVNETA_GMAC_STATUS);
+ 
+ 	if (gmac_stat & MVNETA_GMAC_SPEED_1000)
+-		state->speed = SPEED_1000;
++		state->speed =
++			state->interface == PHY_INTERFACE_MODE_2500BASEX ?
++			SPEED_2500 : SPEED_1000;
+ 	else if (gmac_stat & MVNETA_GMAC_SPEED_100)
+ 		state->speed = SPEED_100;
+ 	else
+@@ -3292,12 +3390,14 @@ static void mvneta_mac_config(struct net_device *ndev, unsigned int mode,
+ 	struct mvneta_port *pp = netdev_priv(ndev);
+ 	u32 new_ctrl0, gmac_ctrl0 = mvreg_read(pp, MVNETA_GMAC_CTRL_0);
+ 	u32 new_ctrl2, gmac_ctrl2 = mvreg_read(pp, MVNETA_GMAC_CTRL_2);
++	u32 new_ctrl4, gmac_ctrl4 = mvreg_read(pp, MVNETA_GMAC_CTRL_4);
+ 	u32 new_clk, gmac_clk = mvreg_read(pp, MVNETA_GMAC_CLOCK_DIVIDER);
+ 	u32 new_an, gmac_an = mvreg_read(pp, MVNETA_GMAC_AUTONEG_CONFIG);
+ 
+ 	new_ctrl0 = gmac_ctrl0 & ~MVNETA_GMAC0_PORT_1000BASE_X;
+ 	new_ctrl2 = gmac_ctrl2 & ~(MVNETA_GMAC2_INBAND_AN_ENABLE |
+ 				   MVNETA_GMAC2_PORT_RESET);
++	new_ctrl4 = gmac_ctrl4 & ~(MVNETA_GMAC4_SHORT_PREAMBLE_ENABLE);
+ 	new_clk = gmac_clk & ~MVNETA_GMAC_1MS_CLOCK_ENABLE;
+ 	new_an = gmac_an & ~(MVNETA_GMAC_INBAND_AN_ENABLE |
+ 			     MVNETA_GMAC_INBAND_RESTART_AN |
+@@ -3369,10 +3469,21 @@ static void mvneta_mac_config(struct net_device *ndev, unsigned int mode,
+ 			    MVNETA_GMAC_FORCE_LINK_DOWN);
+ 	}
+ 
++	/* When at 2.5G, the link partner can send frames with shortened
++	 * preambles.
++	 */
++	if (state->interface == PHY_INTERFACE_MODE_2500BASEX)
++		new_ctrl4 |= MVNETA_GMAC4_SHORT_PREAMBLE_ENABLE;
++
++	if (pp->phy_interface != state->interface)
++		mvneta_config_interface(pp, state->interface);
++
+ 	if (new_ctrl0 != gmac_ctrl0)
+ 		mvreg_write(pp, MVNETA_GMAC_CTRL_0, new_ctrl0);
+ 	if (new_ctrl2 != gmac_ctrl2)
+ 		mvreg_write(pp, MVNETA_GMAC_CTRL_2, new_ctrl2);
++	if (new_ctrl4 != gmac_ctrl4)
++		mvreg_write(pp, MVNETA_GMAC_CTRL_4, new_ctrl4);
+ 	if (new_clk != gmac_clk)
+ 		mvreg_write(pp, MVNETA_GMAC_CLOCK_DIVIDER, new_clk);
+ 	if (new_an != gmac_an)
+-- 
+2.26.2
+
