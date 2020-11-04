@@ -1,0 +1,59 @@
+From 473e2a849a085e713c2929969ecc2724091c1131 Mon Sep 17 00:00:00 2001
+From: Salvatore Mesoraca <salvatore@samknows.com>
+Date: Tue, 3 Nov 2020 16:31:33 +0000
+Subject: [PATCH] net: ethernet: mt7530: add flush_arl_table support
+
+Expose to user-space MT7530's MAC address table flushing
+command.
+
+Signed-off-by: Salvatore Mesoraca <salvatore@samknows.com>
+---
+ drivers/net/ethernet/mediatek/mt7530.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/drivers/net/ethernet/mediatek/mt7530.c b/drivers/net/ethernet/mediatek/mt7530.c
+index 5675494b..bea6c4d6 100644
+--- a/drivers/net/ethernet/mediatek/mt7530.c
++++ b/drivers/net/ethernet/mediatek/mt7530.c
+@@ -57,6 +57,7 @@
+ #define REG_ESW_TABLE_TSRA1 0x84
+ #define REG_ESW_TABLE_TSRA2 0x88
+ 
++#define REG_MAC_ATC_CLEAR  0x8002
+ #define REG_MAC_ATC_START  0x8004
+ #define REG_MAC_ATC_NEXT   0x8005
+ 
+@@ -825,6 +826,17 @@ out:
+ 	return 0;
+ }
+ 
++static int mt7530_sw_set_flush_arl_table(struct switch_dev *dev,
++					 const struct switch_attr *attr,
++					 struct switch_val *val)
++{
++	struct mt7530_priv *priv = container_of(dev, struct mt7530_priv, swdev);
++
++	mt7530_w32(priv, REG_ESW_WT_MAC_ATC, REG_MAC_ATC_CLEAR);
++
++	return 0;
++}
++
+ static int mt7530_sw_get_port_mib(struct switch_dev *dev,
+ 				  const struct switch_attr *attr,
+ 				  struct switch_val *val)
+@@ -876,6 +888,12 @@ static const struct switch_attr mt7530_global[] = {
+ 		.set = NULL,
+ 		.get = mt7530_get_arl_table,
+ 	},
++        {
++		.type = SWITCH_TYPE_NOVAL,
++		.name = "flush_arl_table",
++		.description = "Flush ARL table",
++		.set = mt7530_sw_set_flush_arl_table,
++	},
+ };
+ 
+ static const struct switch_attr mt7621_port[] = {
+-- 
+2.17.1
+

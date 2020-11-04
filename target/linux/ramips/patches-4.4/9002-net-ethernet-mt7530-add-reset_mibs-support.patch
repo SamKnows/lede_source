@@ -1,0 +1,67 @@
+From 1f35032c3e85de47d1b4a648b566d17a61defdf0 Mon Sep 17 00:00:00 2001
+From: Salvatore Mesoraca <salvatore@samknows.com>
+Date: Tue, 3 Nov 2020 16:54:10 +0000
+Subject: [PATCH] net: ethernet: mt7530: add reset_mibs support
+
+Expose to user-space MT7530's MIB counters reset
+command.
+
+Signed-off-by: Salvatore Mesoraca <salvatore@samknows.com>
+---
+ drivers/net/ethernet/mediatek/mt7530.c | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/drivers/net/ethernet/mediatek/mt7530.c b/drivers/net/ethernet/mediatek/mt7530.c
+index 2c68afe1..40762ebc 100644
+--- a/drivers/net/ethernet/mediatek/mt7530.c
++++ b/drivers/net/ethernet/mediatek/mt7530.c
+@@ -61,6 +61,11 @@
+ #define REG_MAC_ATC_START  0x8004
+ #define REG_MAC_ATC_NEXT   0x8005
+ 
++#define REG_ESW_MIB_CNT_CTRL	(MT7621_MIB_COUNTER_BASE + 0xFE0)
++
++#define REG_MIB_CNT_STOP	0
++#define REG_MIB_CNT_START	0x80000000U
++
+ #define REG_MAC_ATC_BUSY      0x8000U
+ #define REG_MAC_ATC_SRCH_HIT  0x2000U
+ #define REG_MAC_ATC_SRCH_END  0x4000U
+@@ -837,6 +842,21 @@ static int mt7530_sw_set_flush_arl_table(struct switch_dev *dev,
+ 	return 0;
+ }
+ 
++static int mt7530_sw_set_reset_mibs(struct switch_dev *dev,
++				    const struct switch_attr *attr,
++				    struct switch_val *val)
++{
++	struct mt7530_priv *priv = container_of(dev, struct mt7530_priv, swdev);
++	u32 value;
++
++	value = mt7530_r32(priv, REG_ESW_MIB_CNT_CTRL);
++	mt7530_w32(priv, REG_ESW_MIB_CNT_CTRL, REG_MIB_CNT_STOP);
++	usleep_range(1000, 5000);
++	mt7530_w32(priv, REG_ESW_MIB_CNT_CTRL, value);
++
++	return 0;
++}
++
+ static int mt7530_sw_get_port_mib(struct switch_dev *dev,
+ 				  const struct switch_attr *attr,
+ 				  struct switch_val *val)
+@@ -894,6 +914,12 @@ static const struct switch_attr mt7530_global[] = {
+ 		.description = "Flush ARL table",
+ 		.set = mt7530_sw_set_flush_arl_table,
+ 	},
++	{
++		.type = SWITCH_TYPE_NOVAL,
++		.name = "reset_mibs",
++		.description = "Reset all MIB counters",
++		.set = mt7530_sw_set_reset_mibs,
++	},
+ };
+ 
+ static const struct switch_attr mt7621_port[] = {
+-- 
+2.17.1
+

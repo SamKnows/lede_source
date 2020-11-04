@@ -1,0 +1,115 @@
+From 37a78c1adf6d1b69fc2dfea597c478ca228bb5d8 Mon Sep 17 00:00:00 2001
+From: Salvatore Mesoraca <salvatore@samknows.com>
+Date: Thu, 5 Nov 2020 15:52:21 +0000
+Subject: [PATCH] net: ethernet: mt7530: add per port flush_arl_table
+ support
+
+Expose to user-space MT7530's per port ARL table reset
+command.
+
+Signed-off-by: Salvatore Mesoraca <salvatore@samknows.com>
+---
+ drivers/net/ethernet/mediatek/mt7530.c | 68 ++++++++++++++++++++++++++
+ 1 file changed, 68 insertions(+)
+
+diff --git a/drivers/net/ethernet/mediatek/mt7530.c b/drivers/net/ethernet/mediatek/mt7530.c
+index 40762ebc..5f59b635 100644
+--- a/drivers/net/ethernet/mediatek/mt7530.c
++++ b/drivers/net/ethernet/mediatek/mt7530.c
+@@ -52,11 +52,15 @@
+ #define REG_ESW_VLAN_VAWD2		0x98
+ #define REG_ESW_VLAN_VTIM(x)	(0x100 + 4 * ((x) / 2))
+ 
++#define REG_ESW_WT_MAC_ATA1 0x74
++#define REG_ESW_WT_MAC_ATA2 0x78
++#define REG_ESW_WT_MAC_ATWD 0x7C
+ #define REG_ESW_WT_MAC_ATC  0x80
+ #define REG_ESW_TABLE_ATRD  0x8C
+ #define REG_ESW_TABLE_TSRA1 0x84
+ #define REG_ESW_TABLE_TSRA2 0x88
+ 
++#define REG_MAC_ATC_WRITE  0x8001
+ #define REG_MAC_ATC_CLEAR  0x8002
+ #define REG_MAC_ATC_START  0x8004
+ #define REG_MAC_ATC_NEXT   0x8005
+@@ -842,6 +846,64 @@ static int mt7530_sw_set_flush_arl_table(struct switch_dev *dev,
+ 	return 0;
+ }
+ 
++static int mt7530_sw_set_flush_port_arl_table(struct switch_dev *dev,
++					      const struct switch_attr *attr,
++					      struct switch_val *val)
++{
++	struct mt7530_priv *priv = container_of(dev, struct mt7530_priv, swdev);
++	size_t retry_times = 100;
++	u32 atc;
++	u8 req_port;
++
++	if (val->port_vlan >= MT7530_NUM_PORTS)
++		return -EINVAL;
++	req_port = 1U << val->port_vlan;
++
++	mt7530_w32(priv, REG_ESW_WT_MAC_ATC, REG_MAC_ATC_START);
++
++	do {
++		atc = mt7530_r32(priv, REG_ESW_WT_MAC_ATC);
++		if (atc & REG_MAC_ATC_SRCH_HIT && !(atc & REG_MAC_ATC_BUSY)) {
++			u32 atrd;
++
++			atrd = mt7530_r32(priv, REG_ESW_TABLE_ATRD);
++			if (atrd & REG_ATRD_VALID) {
++				u8 port_map;
++
++				port_map = (u8)((atrd & REG_ATRD_PORT_MASK) >> 4);
++
++				if (port_map & req_port) {
++					u32 mac;
++					u32 atc2;
++
++					mac = mt7530_r32(priv, REG_ESW_TABLE_TSRA1);
++					mt7530_w32(priv, REG_ESW_WT_MAC_ATA1, mac);
++					mac = mt7530_r32(priv, REG_ESW_TABLE_TSRA2);
++					mt7530_w32(priv, REG_ESW_WT_MAC_ATA2, mac);
++					mt7530_w32(priv, REG_ESW_WT_MAC_ATWD, 0);
++					mt7530_w32(priv, REG_ESW_WT_MAC_ATC, REG_MAC_ATC_WRITE);
++
++					do {
++						atc2 = mt7530_r32(priv, REG_ESW_WT_MAC_ATC);
++						if (atc2 & REG_MAC_ATC_BUSY) {
++							--retry_times;
++							usleep_range(1000, 5000);
++						}
++					} while ((atc2 & REG_MAC_ATC_BUSY) && retry_times > 0);
++				}
++			}
++			if (!(atc & REG_MAC_ATC_SRCH_END))
++				mt7530_w32(priv, REG_ESW_WT_MAC_ATC, REG_MAC_ATC_NEXT);
++		} else {
++			--retry_times;
++			usleep_range(1000, 5000);
++		}
++	} while (!(atc & REG_MAC_ATC_SRCH_END) &&
++		 retry_times > 0);
++out:
++	return 0;
++}
++
+ static int mt7530_sw_set_reset_mibs(struct switch_dev *dev,
+ 				    const struct switch_attr *attr,
+ 				    struct switch_val *val)
+@@ -930,6 +992,12 @@ static const struct switch_attr mt7621_port[] = {
+ 		.get = mt7621_sw_get_port_mib,
+ 		.set = NULL,
+ 	},
++	{
++		.type = SWITCH_TYPE_NOVAL,
++		.name = "flush_arl_table",
++		.description = "Flush port's ARL table entries",
++		.set = mt7530_sw_set_flush_port_arl_table,
++	},
+ };
+ 
+ static const struct switch_attr mt7530_port[] = {
+-- 
+2.17.1
+
