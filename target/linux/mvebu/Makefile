@@ -8,6 +8,7 @@ include $(TOPDIR)/rules.mk
 
 BOARD:=mvebu
 BOARDNAME:=Marvell EBU Armada
+DEVICE_TYPE:=samknows
 FEATURES:=fpu usb pci pcie gpio nand squashfs ramdisk boot-part rootfs-part
 SUBTARGETS:=cortexa9 cortexa53 cortexa72
 MAINTAINER:=Imre Kaloz <kaloz@openwrt.org>
