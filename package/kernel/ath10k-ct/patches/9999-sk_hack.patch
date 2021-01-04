@@ -1,0 +1,22 @@
+--- a/ath10k-4.19/mac.c
++++ b/ath10k-4.19/mac.c
+@@ -9657,6 +9657,7 @@
+ 	struct ieee80211_supported_band *band;
+ 	void *channels;
+ 	int ret;
++	int i;
+ 
+ 	SET_IEEE80211_PERM_ADDR(ar->hw, ar->mac_addr);
+ 
+@@ -9688,6 +9689,11 @@
+ 		}
+ 
+ 		ar->hw->wiphy->bands[NL80211_BAND_2GHZ] = band;
++
++		for (i = 0; i < band->n_channels; i++) {
++			struct ieee80211_channel *chan = &band->channels[i];
++			chan->flags |= IEEE80211_CHAN_DISABLED;
++		}
+ 	}
+ 
+ 	if (ar->phy_capability & WHAL_WLAN_11A_CAPABILITY) {
