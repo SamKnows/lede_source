@@ -1,0 +1,53 @@
+From 9efb4022c8daeccbf7b08572142c79619609638b Mon Sep 17 00:00:00 2001
+From: Salvatore Mesoraca <salvatore@samknows.com>
+Date: Mon, 20 Jul 2020 10:06:36 +0100
+Subject: [PATCH] ath10k: fallback to rx_channel when event channel is broken
+
+[379531.541487] ------------[ cut here ]------------
+[379531.546447] WARNING: CPU: 0 PID: 0 at /home/salvatore/Projects/lanmonitor/boh/lede_source/build_dir/target-mips_74kc_musl/linux-ath79_generic/ath10k-ct-regular/ath10k-ct-2019-09-09-5e8cd86f/ath10k-4.19/wmi.c:2571 ath10k_wmi_event_mgmt_rx+0x21c/0x460 [ath10k_core]
+[379531.570161] Modules linked in: ath10k_pci ath10k_core tun ath9k ath9k_common ath9k_hw ath mac80211 cfg80211 compat gpio_button_hotplug [last unloaded: ath10k_core]
+[379531.585097] CPU: 0 PID: 0 Comm: swapper Tainted: G        W       4.14.176 #0
+[379531.592420] Stack : 804b0000 804b4718 00000000 00000000 8052f37c 87c15cdc 8058df8c 8058dba7
+[379531.600999]         8052aa10 00000000 807036c0 00000a0b 00fffe1f 00000001 87c15c90 214d682a
+[379531.609577]         00000000 00000000 80700000 0000b510 00000000 00000000 00000007 00000000
+[379531.618150]         00006002 f5f92526 00006001 2020342e 00000000 00000009 00000000 85055f94
+[379531.626730]         85032710 00000a0b 00fffe1f 80590000 00000001 802c60f4 00000000 80700000
+[379531.635312]         ...
+[379531.637881] Call Trace:
+[379531.640471] [<8006b0ac>] show_stack+0x58/0x100
+[379531.645071] [<80087b7c>] __warn+0xe8/0x140
+[379531.649331] [<80087c64>] warn_slowpath_null+0x1c/0x28
+[379531.654690] [<85032710>] ath10k_wmi_event_mgmt_rx+0x21c/0x460 [ath10k_core]
+[379531.662010] [<8501cde8>] ath10k_htc_rx_completion_handler+0x148/0x170 [ath10k_core]
+[379531.670011] [<87501934>] ath10k_pci_process_rx_cb+0x16c/0x1ac [ath10k_pci]
+[379531.677192] [<850440d0>] ath10k_ce_per_engine_service+0xac/0x138 [ath10k_core]
+[379531.684767] [<850441d0>] ath10k_ce_per_engine_service_any+0x74/0xc0 [ath10k_core]
+[379531.692607] [<87503158>] ath10k_pci_napi_poll+0x78/0x13c [ath10k_pci]
+[379531.699266] [<80358c50>] net_rx_action+0x140/0x358
+[379531.704224] [<8047f2f8>] __do_softirq+0x140/0x350
+[379531.709098] [<802735c0>] plat_irq_dispatch+0xc0/0x120
+[379531.714310] [<800658d8>] handle_int+0x138/0x144
+[379531.719012] [<800673cc>] r4k_wait_irqoff+0x18/0x24
+[379531.723961] ---[ end trace af8f6ab6c88553a7 ]---
+---
+ ath10k-4.19/wmi.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/ath10k-4.19/wmi.c b/ath10k-4.19/wmi.c
+index 165694b..3522f3b 100644
+--- a/ath10k-4.19/wmi.c
++++ b/ath10k-4.19/wmi.c
+@@ -2554,6 +2554,10 @@ int ath10k_wmi_event_mgmt_rx(struct ath10k *ar, struct sk_buff *skb)
+ 		status->band = NL80211_BAND_2GHZ;
+ 	} else if (channel >= 36 && channel <= ATH10K_MAX_5G_CHAN) {
+ 		status->band = NL80211_BAND_5GHZ;
++	} else if(ar->rx_channel &&
++		  ar->rx_channel->center_freq >= 5000 &&
++		  ar->rx_channel->center_freq < 6000) {
++		status->band = NL80211_BAND_5GHZ;
+ 	} else {
+ 		/* Shouldn't happen unless list of advertised channels to
+ 		 * mac80211 has been changed.
+-- 
+2.17.1
+
