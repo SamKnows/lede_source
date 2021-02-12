@@ -49,7 +49,7 @@ mkdir -p "${LMAP_BUILD_DIR}/ispmon/runonce.d/"
 cat > "${LMAP_BUILD_DIR}/ispmon/runonce.d/001-bootdelay.sh" <<EOF
 #!/bin/sh
 
-if [ "\$(cat /etc/samknows/firmwareversion)" == "3" ]; then
+if [ "\$(cat /etc/samknows/firmwareversion)" == "4" ]; then
     if [ "\$(fw_printenv -n bootdelay)" != 0 ]; then
         fw_setenv bootdelay 0
     fi
