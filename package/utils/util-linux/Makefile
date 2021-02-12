@@ -695,3 +695,20 @@ $(eval $(call BuildPackage,uuidgen))
 $(eval $(call BuildPackage,wall))
 $(eval $(call BuildPackage,whereis))
 $(eval $(call BuildPackage,wipefs))
+
+
+define Package/hexdump
+$(call Package/util-linux/Default)
+  TITLE:=hexdump
+endef
+
+define Package/hexdump/description
+ contains hexdump
+endef
+
+define Package/hexdump/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hexdump $(1)/usr/bin/
+endef
+
+$(eval $(call BuildPackage,hexdump))
