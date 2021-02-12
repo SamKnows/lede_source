@@ -33,6 +33,7 @@ find files/ -xtype l | while read -r f; do
     cp -a "${TOROOT}/$(echo "${f}" | sed 's#^files/##')" "${DST}"
 done
 
+# Make sure that the /ispmon symlink is created as early as possible
 mkdir -p "${LMAP_BUILD_DIR}/ispmon/runonce.d/"
 cat > "${LMAP_BUILD_DIR}/ispmon/runonce.d/000-symlink_ispmon.sh" <<EOF
 #!/bin/sh
@@ -42,6 +43,20 @@ if [ ! -e /ispmon ]; then
 fi
 EOF
 chmod +x "${LMAP_BUILD_DIR}/ispmon/runonce.d/000-symlink_ispmon.sh"
+
+# Prevent u-boot access
+mkdir -p "${LMAP_BUILD_DIR}/ispmon/runonce.d/"
+cat > "${LMAP_BUILD_DIR}/ispmon/runonce.d/001-bootdelay.sh" <<EOF
+#!/bin/sh
+
+if [ "\$(cat /etc/samknows/firmwareversion)" == "3" ]; then
+    if [ "\$(fw_printenv -n bootdelay)" != 0 ]; then
+        fw_setenv bootdelay 0
+    fi
+fi
+
+EOF
+chmod +x "${LMAP_BUILD_DIR}/ispmon/runonce.d/001-bootdelay.sh"
 
 # Create tarball
 tar czf "${LMAP_BUILD_DIR}/removed-tools.tgz" --owner=root --group=root -C "${LMAP_BUILD_DIR}/" ispmon
