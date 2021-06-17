@@ -4,7 +4,6 @@
 
 quit() {
     led_set_preparing
-    reboot -n -f
     exit 1
 }
 
