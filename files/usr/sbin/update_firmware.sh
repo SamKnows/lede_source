@@ -11,19 +11,19 @@ quit() {
 led_set_downloading
 
 MAC=$(cat /sys/class/net/eth0/address | sed 's/://g' | tr [a-f] [A-F])
-VERSION=$(uclient-fetch -q --timeout 20 -O - "http://dcs-global.samknows.com/firmware?mac=${MAC}&model=${UNIT_MODEL}")
+VERSION=$(uclient-fetch -4 -q --timeout 20 -O - "http://dcs-global.samknows.com/firmware?mac=${MAC}&model=${UNIT_MODEL}")
 if [ $? -ne 0 -o -z "${VERSION}" ]; then
     quit
 fi
 
-MD5SUM=$(uclient-fetch -q --timeout 30 -O - "http://dcs-global.samknows.com/upgrade/${UNIT_MODEL}/${VERSION}.md5sum")
+MD5SUM=$(uclient-fetch -4 -q --timeout 30 -O - "http://dcs-global.samknows.com/upgrade/${UNIT_MODEL}/${VERSION}.md5sum")
 if [ $? -ne 0 -o -z "${MD5SUM}" ]; then
     echo "Download md5 sum of firmware failed"
     quit
 fi
 
 # Retrive the firmware
-uclient-fetch -q --timeout 600 -O /tmp/firmware.bin "http://dcs-global.samknows.com/upgrade/${UNIT_MODEL}/${VERSION}.bin"
+uclient-fetch -4 -q --timeout 600 -O /tmp/firmware.bin "http://dcs-global.samknows.com/upgrade/${UNIT_MODEL}/${VERSION}.bin"
 if [ $? -ne 0 ]; then
     echo "Download firmware failed"
     quit
@@ -42,7 +42,7 @@ if [ "$FIRMWARESUM" = "$MD5SUM" ]; then
     mtd write /tmp/firmware.bin mainimage
     WRITTENSUM=$(head -c $FIRMWARESIZE /dev/mtdblock3 | md5sum | cut -d " " -f 1)
     if [ "$WRITTENSUM" = $MD5SUM ]; then
-        uclient-fetch -q --timeout 10 "http://dcs-global.samknows.com/firmware_upgrade_success?mac=${MAC}&model=${UNIT_MODEL}&newversion=${VERSION}"
+        uclient-fetch -4 -q --timeout 10 "http://dcs-global.samknows.com/firmware_upgrade_success?mac=${MAC}&model=${UNIT_MODEL}&newversion=${VERSION}"
         fw_setenv bootcount 0
         reboot -n -f
     fi
